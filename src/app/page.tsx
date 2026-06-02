@@ -199,6 +199,7 @@ export default function PartidoPage() {
   const [equipoEditado, setEquipoEditado] = useState<{ equipo1: Jugador[]; equipo2: Jugador[] } | null>(null);
   const [mostrarCancha, setMostrarCancha] = useState(false);
   const [mostrarResultado, setMostrarResultado] = useState(false);
+  const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
   const [goles1, setGoles1] = useState('');
   const [goles2, setGoles2] = useState('');
   const [notas, setNotas] = useState('');
@@ -259,7 +260,7 @@ export default function PartidoPage() {
     mutationFn: () => {
       if (!equipoEditado) throw new Error();
       return axios.post<{ id: string }>('/api/partidos', {
-        fecha: new Date().toISOString().split('T')[0],
+        fecha,
         equipo1: equipoEditado.equipo1.map(j => j.id),
         equipo2: equipoEditado.equipo2.map(j => j.id),
         invitados: invitadosPayload(),
@@ -279,7 +280,7 @@ export default function PartidoPage() {
     mutationFn: () => {
       if (!partidoGuardadoId || !equipoEditado) throw new Error();
       return axios.put(`/api/partidos/${partidoGuardadoId}`, {
-        fecha: new Date().toISOString().split('T')[0],
+        fecha,
         equipo1: equipoEditado.equipo1.map(j => j.id),
         equipo2: equipoEditado.equipo2.map(j => j.id),
         goles1: goles1 !== '' ? parseInt(goles1) : undefined,
@@ -303,6 +304,7 @@ export default function PartidoPage() {
     setPartidoGuardadoId(null);
     setMostrarResultado(false);
     setMostrarCancha(false);
+    setFecha(new Date().toISOString().split('T')[0]);
     setGoles1('');
     setGoles2('');
     setNotas('');
@@ -459,9 +461,15 @@ export default function PartidoPage() {
                 goles2=""
               />
             )}
-            <div>
-              <Label className="text-xs">Notas (opcional)</Label>
-              <Input value={notas} onChange={e => setNotas(e.target.value)} placeholder="ej: lluvia, cancha nueva..." className="mt-1" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Fecha del partido</Label>
+                <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Notas (opcional)</Label>
+                <Input value={notas} onChange={e => setNotas(e.target.value)} placeholder="ej: lluvia..." className="mt-1" />
+              </div>
             </div>
             <Button
               className="w-full gap-2 bg-green-600 hover:bg-green-700"
