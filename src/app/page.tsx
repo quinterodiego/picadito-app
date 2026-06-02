@@ -327,7 +327,7 @@ export default function PartidoPage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2"><Users size={16} /> ¿Quiénes vienen hoy?</span>
+            <span className="flex items-center gap-2"><Users size={16} /> ¿Quiénes juegan?</span>
             {totalJugadores > 0 && (
               <span className="text-sm font-semibold text-green-600">{totalJugadores} seleccionados</span>
             )}
