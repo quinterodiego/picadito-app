@@ -14,8 +14,8 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 safe-area-pb">
-      <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-4">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 navbar-safe-area">
+      <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-5">
         {links.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
