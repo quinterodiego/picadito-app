@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${outfit.variable} h-full antialiased`}>
+    <html lang="es" className={`${outfit.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-slate-50 text-slate-900">
         <QueryProvider>
           <main className="w-full max-w-5xl mx-auto navbar-safe-padding px-5 pt-5">{children}</main>

@@ -200,7 +200,7 @@ export default function JugadoresPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Jugadores</h1>
-        <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700" onClick={() => setOpenForm(true)}>
+        <Button size="sm" className="gap-1.5 bg-brand hover:bg-brand-hover" onClick={() => setOpenForm(true)}>
           <Plus size={15} /> Agregar
         </Button>
       </div>
@@ -276,7 +276,7 @@ export default function JugadoresPage() {
                     </div>
                     <button
                       onClick={() => toggleActivoMutation.mutate(j)}
-                      className="cursor-pointer p-1.5 rounded-lg hover:bg-green-50 text-slate-400 hover:text-green-600"
+                      className="cursor-pointer p-1.5 rounded-lg hover:bg-brand-light text-slate-400 hover:text-brand"
                       title="Activar"
                     >
                       <UserCheck size={16} />

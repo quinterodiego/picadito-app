@@ -23,7 +23,7 @@ export default function Navbar() {
               key={href}
               href={href}
               className={`cursor-pointer flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-                active ? 'text-green-600' : 'text-slate-400 hover:text-slate-600'
+                active ? 'text-brand' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />

@@ -1,5 +1,7 @@
 export type NivelJugador = 'bajo' | 'semi-medio' | 'medio' | 'semi-alto' | 'alto';
 
+export type ResultadoPartido = 'A' | 'B' | 'empate';
+
 export interface Jugador {
   id: string;
   nombre: string;
@@ -13,12 +15,13 @@ export interface Jugador {
 
 export interface Partido {
   id: string;
-  fecha: string; // ISO date YYYY-MM-DD
-  equipo1: string[]; // player IDs
-  equipo2: string[]; // player IDs
-  goles1?: number;   // undefined = sin resultado cargado
-  goles2?: number;
+  fecha: string;
+  equipo1: string[];
+  equipo2: string[];
+  resultado?: ResultadoPartido; // undefined = sin resultado cargado
   notas?: string;
+  destacado?: string; // player ID
+  rustico?: string;   // player ID
 }
 
 export interface EquipoSugerido {
@@ -28,16 +31,4 @@ export interface EquipoSugerido {
   nivelEquipo2: number;
   scoreBalance: number;
   scoreRotacion: number;
-}
-
-export interface EstadisticaJugador {
-  jugador: Jugador;
-  partidosJugados: number;
-  golesFavor: number;
-  golesContra: number;
-  victorias: number;
-  derrotas: number;
-  empates: number;
-  companerosFrequentes: { jugador: Jugador; veces: number }[];
-  rivalesFrequentes: { jugador: Jugador; veces: number }[];
 }

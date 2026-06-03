@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Jugador, Partido } from '@/lib/types';
+import type { Jugador, Partido, ResultadoPartido } from '@/lib/types';
 
 function useJugadores() {
   return useQuery<Jugador[]>({
@@ -26,65 +26,51 @@ function formatFecha(iso: string) {
   return d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function ResultadoBadge({ g1, g2 }: { g1?: number; g2?: number }) {
-  if (g1 == null || g2 == null) return <span className="text-xs text-slate-400 italic">Sin resultado</span>;
-  if (g1 > g2) return <span className="text-xs font-bold text-green-600 flex items-center gap-1"><Trophy size={12} /> A ganó</span>;
-  if (g2 > g1) return <span className="text-xs font-bold text-green-600 flex items-center gap-1"><Trophy size={12} /> B ganó</span>;
+function ResultadoBadge({ resultado }: { resultado?: ResultadoPartido }) {
+  if (!resultado) return <span className="text-xs text-slate-400 italic">Sin resultado</span>;
+  if (resultado === 'A') return <span className="text-xs font-bold text-slate-700 flex items-center gap-1"><Trophy size={12} className="text-yellow-500" /> Ganó Equipo A</span>;
+  if (resultado === 'B') return <span className="text-xs font-bold text-brand flex items-center gap-1"><Trophy size={12} className="text-yellow-500" /> Ganó Equipo B</span>;
   return <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><Minus size={12} /> Empate</span>;
 }
 
 // ─── Editor de partido ────────────────────────────────────────────────────────
 function EditPartidoDialog({
-  partido,
-  jugadores,
-  onSave,
-  onClose,
-  loading,
+  partido, jugadores, onSave, onClose, loading,
 }: {
   partido: Partido;
   jugadores: Jugador[];
-  onSave: (data: { fecha: string; equipo1: string[]; equipo2: string[]; goles1?: number; goles2?: number; notas: string }) => void;
+  onSave: (data: { fecha: string; equipo1: string[]; equipo2: string[]; resultado?: ResultadoPartido; notas: string; destacado: string; rustico: string }) => void;
   onClose: () => void;
   loading: boolean;
 }) {
   const [fecha, setFecha] = useState(partido.fecha);
   const [equipo1, setEquipo1] = useState<string[]>(partido.equipo1);
   const [equipo2, setEquipo2] = useState<string[]>(partido.equipo2);
-  const [goles1, setGoles1] = useState(partido.goles1?.toString() ?? '');
-  const [goles2, setGoles2] = useState(partido.goles2?.toString() ?? '');
+  const [resultado, setResultado] = useState<ResultadoPartido | ''>(partido.resultado ?? '');
+  const [destacado, setDestacado] = useState(partido.destacado ?? '');
+  const [rustico, setRustico] = useState(partido.rustico ?? '');
   const [notas, setNotas] = useState(partido.notas ?? '');
 
   const jugMap = new Map(jugadores.map(j => [j.id, j]));
   const asignadosIds = new Set([...equipo1, ...equipo2]);
   const disponibles = jugadores.filter(j => !asignadosIds.has(j.id));
+  const todosJugadores = [...equipo1, ...equipo2];
 
   function nombre(id: string) {
     const j = jugMap.get(id);
     return j ? (j.apodo || j.nombre) : id;
   }
-
-  function moverAEquipo2(id: string) {
-    setEquipo1(p => p.filter(x => x !== id));
-    setEquipo2(p => p.includes(id) ? p : [...p, id]);
-  }
-  function moverAEquipo1(id: string) {
-    setEquipo2(p => p.filter(x => x !== id));
-    setEquipo1(p => p.includes(id) ? p : [...p, id]);
-  }
-  function agregar(id: string, equipo: 1 | 2) {
-    if (equipo === 1) setEquipo1(p => [...p, id]);
-    else setEquipo2(p => [...p, id]);
-  }
+  function moverAEquipo2(id: string) { setEquipo1(p => p.filter(x => x !== id)); setEquipo2(p => p.includes(id) ? p : [...p, id]); }
+  function moverAEquipo1(id: string) { setEquipo2(p => p.filter(x => x !== id)); setEquipo1(p => p.includes(id) ? p : [...p, id]); }
+  function agregar(id: string, equipo: 1 | 2) { if (equipo === 1) setEquipo1(p => [...p, id]); else setEquipo2(p => [...p, id]); }
 
   return (
     <div className="space-y-4">
-      {/* Fecha */}
       <div>
         <Label className="text-xs">Fecha del partido</Label>
         <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="mt-1" />
       </div>
 
-      {/* Equipos */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <p className="text-xs font-semibold text-slate-600 mb-1.5">Equipo A</p>
@@ -92,19 +78,8 @@ function EditPartidoDialog({
             {equipo1.map(id => (
               <div key={id} className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm">
                 <span className="flex-1 truncate">{nombre(id)}</span>
-                <button
-                  onClick={() => moverAEquipo2(id)}
-                  className="cursor-pointer text-blue-400 hover:text-blue-600 shrink-0"
-                  title="Mover a Equipo B"
-                >
-                  <ArrowRight size={13} />
-                </button>
-                <button
-                  onClick={() => setEquipo1(p => p.filter(x => x !== id))}
-                  className="cursor-pointer text-slate-300 hover:text-red-400 shrink-0"
-                >
-                  <X size={13} />
-                </button>
+                <button onClick={() => moverAEquipo2(id)} className="cursor-pointer text-blue-400 hover:text-blue-600 shrink-0"><ArrowRight size={13} /></button>
+                <button onClick={() => setEquipo1(p => p.filter(x => x !== id))} className="cursor-pointer text-slate-300 hover:text-red-400 shrink-0"><X size={13} /></button>
               </div>
             ))}
           </div>
@@ -114,44 +89,24 @@ function EditPartidoDialog({
           <div className="space-y-1">
             {equipo2.map(id => (
               <div key={id} className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-sm">
-                <button
-                  onClick={() => moverAEquipo1(id)}
-                  className="cursor-pointer text-blue-400 hover:text-blue-600 shrink-0"
-                  title="Mover a Equipo A"
-                >
-                  <ArrowRight size={13} className="rotate-180" />
-                </button>
+                <button onClick={() => moverAEquipo1(id)} className="cursor-pointer text-blue-400 hover:text-blue-600 shrink-0"><ArrowRight size={13} className="rotate-180" /></button>
                 <span className="flex-1 truncate">{nombre(id)}</span>
-                <button
-                  onClick={() => setEquipo2(p => p.filter(x => x !== id))}
-                  className="cursor-pointer text-slate-300 hover:text-red-400 shrink-0"
-                >
-                  <X size={13} />
-                </button>
+                <button onClick={() => setEquipo2(p => p.filter(x => x !== id))} className="cursor-pointer text-slate-300 hover:text-red-400 shrink-0"><X size={13} /></button>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Jugadores disponibles */}
       {disponibles.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1">
-            <UserPlus size={12} /> Agregar jugadores
-          </p>
+          <p className="text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1"><UserPlus size={12} /> Agregar jugadores</p>
           <div className="flex flex-wrap gap-1.5">
             {disponibles.map(j => (
               <div key={j.id} className="flex items-center gap-0 border border-slate-200 rounded-full overflow-hidden text-xs">
                 <span className="px-2 py-1 text-slate-600">{j.apodo || j.nombre}</span>
-                <button
-                  onClick={() => agregar(j.id, 1)}
-                  className="cursor-pointer px-2 py-1 bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-700 font-bold border-l border-slate-200"
-                >A</button>
-                <button
-                  onClick={() => agregar(j.id, 2)}
-                  className="cursor-pointer px-2 py-1 bg-slate-100 hover:bg-green-100 text-slate-500 hover:text-green-700 font-bold border-l border-slate-200"
-                >B</button>
+                <button onClick={() => agregar(j.id, 1)} className="cursor-pointer px-2 py-1 bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-700 font-bold border-l border-slate-200">A</button>
+                <button onClick={() => agregar(j.id, 2)} className="cursor-pointer px-2 py-1 bg-slate-100 hover:bg-brand-light text-slate-500 hover:text-brand font-bold border-l border-slate-200">B</button>
               </div>
             ))}
           </div>
@@ -160,17 +115,42 @@ function EditPartidoDialog({
 
       {/* Resultado */}
       <div>
-        <p className="text-xs font-medium text-slate-400 mb-1.5">Resultado (opcional)</p>
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <Label className="text-xs">Goles A</Label>
-            <Input type="number" min={0} value={goles1} onChange={e => setGoles1(e.target.value)} placeholder="—" className="mt-1" />
-          </div>
-          <span className="text-lg font-bold text-slate-400 mt-4">–</span>
-          <div className="flex-1">
-            <Label className="text-xs">Goles B</Label>
-            <Input type="number" min={0} value={goles2} onChange={e => setGoles2(e.target.value)} placeholder="—" className="mt-1" />
-          </div>
+        <Label className="text-xs">Resultado</Label>
+        <div className="grid grid-cols-3 gap-2 mt-1">
+          {(['A', 'empate', 'B'] as const).map(r => (
+            <button
+              key={r}
+              onClick={() => setResultado(prev => prev === r ? '' : r)}
+              className={`cursor-pointer py-2 rounded-lg text-sm font-semibold border transition-all ${
+                resultado === r
+                  ? r === 'empate' ? 'bg-slate-200 border-slate-300 text-slate-700 ring-2 ring-slate-400'
+                    : 'bg-brand border-brand text-white ring-2 ring-brand'
+                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-400'
+              }`}
+            >
+              {r === 'A' ? '🤍 Ganó A' : r === 'B' ? '💚 Ganó B' : '🤝 Empate'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Destacado y Rústico */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">⭐ Destacado</Label>
+          <select value={destacado} onChange={e => setDestacado(e.target.value)}
+            className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none focus:border-brand">
+            <option value="">—</option>
+            {todosJugadores.map(id => <option key={id} value={id}>{nombre(id)}</option>)}
+          </select>
+        </div>
+        <div>
+          <Label className="text-xs">🪨 Rústico</Label>
+          <select value={rustico} onChange={e => setRustico(e.target.value)}
+            className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none focus:border-orange-400">
+            <option value="">—</option>
+            {todosJugadores.map(id => <option key={id} value={id}>{nombre(id)}</option>)}
+          </select>
         </div>
       </div>
 
@@ -181,14 +161,7 @@ function EditPartidoDialog({
 
       <DialogFooter className="gap-2">
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
-        <Button
-          onClick={() => onSave({
-            fecha, equipo1, equipo2, notas,
-            goles1: goles1 !== '' ? parseInt(goles1) : undefined,
-            goles2: goles2 !== '' ? parseInt(goles2) : undefined,
-          })}
-          disabled={loading}
-        >
+        <Button onClick={() => onSave({ fecha, equipo1, equipo2, resultado: resultado || undefined, notas, destacado, rustico })} disabled={loading}>
           {loading ? 'Guardando...' : 'Guardar cambios'}
         </Button>
       </DialogFooter>
@@ -212,22 +185,14 @@ export default function HistorialPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => axios.delete(`/api/partidos/${id}`),
-    onSuccess: () => {
-      toast.success('Partido eliminado');
-      qc.invalidateQueries({ queryKey: ['partidos'] });
-      setConfirmDelete(null);
-    },
+    onSuccess: () => { toast.success('Partido eliminado'); qc.invalidateQueries({ queryKey: ['partidos'] }); setConfirmDelete(null); },
     onError: () => toast.error('Error al eliminar partido'),
   });
 
   const editMutation = useMutation({
-    mutationFn: (data: { fecha: string; equipo1: string[]; equipo2: string[]; goles1?: number; goles2?: number; notas: string }) =>
+    mutationFn: (data: { fecha: string; equipo1: string[]; equipo2: string[]; resultado?: ResultadoPartido; notas: string; destacado: string; rustico: string }) =>
       axios.put(`/api/partidos/${editando!.id}`, data),
-    onSuccess: () => {
-      toast.success('Partido actualizado');
-      qc.invalidateQueries({ queryKey: ['partidos'] });
-      setEditando(null);
-    },
+    onSuccess: () => { toast.success('Partido actualizado'); qc.invalidateQueries({ queryKey: ['partidos'] }); setEditando(null); },
     onError: () => toast.error('Error al actualizar partido'),
   });
 
@@ -254,94 +219,61 @@ export default function HistorialPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs text-slate-400">{formatFecha(p.fecha)}</p>
-                    <ResultadoBadge g1={p.goles1} g2={p.goles2} />
+                    <ResultadoBadge resultado={p.resultado} />
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-2xl font-bold tabular-nums text-slate-700">
-                      {p.goles1 != null && p.goles2 != null ? `${p.goles1} – ${p.goles2}` : '— —'}
-                    </span>
-                    <button
-                      onClick={() => setEditando(p)}
-                      className="cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-600"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(p)}
-                      className="cursor-pointer p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <button onClick={() => setEditando(p)} className="cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-600"><Pencil size={15} /></button>
+                    <button onClick={() => setConfirmDelete(p)} className="cursor-pointer p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><Trash2 size={15} /></button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-slate-50 rounded-lg p-2">
-                    <p className="font-semibold text-slate-600 mb-1">Equipo A</p>
+                  <div className={`rounded-lg p-2 ${p.resultado === 'A' ? 'bg-yellow-50 border border-yellow-200' : 'bg-slate-50'}`}>
+                    <p className="font-semibold text-slate-600 mb-1">Equipo A {p.resultado === 'A' && '🏆'}</p>
                     <div className="flex flex-wrap gap-1">
-                      {p.equipo1.map(id => (
-                        <span key={id} className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full">
-                          {displayNombre(id)}
-                        </span>
-                      ))}
+                      {p.equipo1.map(id => <span key={id} className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full">{displayNombre(id)}</span>)}
                     </div>
                   </div>
-                  <div className="bg-slate-50 rounded-lg p-2">
-                    <p className="font-semibold text-slate-600 mb-1">Equipo B</p>
+                  <div className={`rounded-lg p-2 ${p.resultado === 'B' ? 'bg-yellow-50 border border-yellow-200' : 'bg-slate-50'}`}>
+                    <p className="font-semibold text-slate-600 mb-1">Equipo B {p.resultado === 'B' && '🏆'}</p>
                     <div className="flex flex-wrap gap-1">
-                      {p.equipo2.map(id => (
-                        <span key={id} className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full">
-                          {displayNombre(id)}
-                        </span>
-                      ))}
+                      {p.equipo2.map(id => <span key={id} className="bg-white border border-slate-200 px-1.5 py-0.5 rounded-full">{displayNombre(id)}</span>)}
                     </div>
                   </div>
                 </div>
 
-                {p.notas && <p className="text-xs text-slate-400 italic">{p.notas}</p>}
+                {(p.destacado || p.rustico || p.notas) && (
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                    {p.destacado && <span>⭐ <strong>{displayNombre(p.destacado)}</strong></span>}
+                    {p.rustico && <span>🪨 <strong>{displayNombre(p.rustico)}</strong></span>}
+                    {p.notas && <span className="italic">{p.notas}</span>}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Dialog editar */}
       <Dialog open={!!editando} onOpenChange={v => !v && setEditando(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar partido</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Editar partido</DialogTitle></DialogHeader>
           {editando && (
-            <EditPartidoDialog
-              partido={editando}
-              jugadores={jugadores}
-              onSave={data => editMutation.mutate(data)}
-              onClose={() => setEditando(null)}
-              loading={editMutation.isPending}
-            />
+            <EditPartidoDialog partido={editando} jugadores={jugadores}
+              onSave={data => editMutation.mutate(data)} onClose={() => setEditando(null)} loading={editMutation.isPending} />
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Dialog confirmar borrar */}
       <Dialog open={!!confirmDelete} onOpenChange={v => !v && setConfirmDelete(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar partido</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Eliminar partido</DialogTitle></DialogHeader>
           <p className="text-sm text-slate-600">
-            ¿Seguro que querés eliminar el partido del{' '}
-            <strong>{confirmDelete ? formatFecha(confirmDelete.fecha) : ''}</strong>?
+            ¿Seguro que querés eliminar el partido del <strong>{confirmDelete ? formatFecha(confirmDelete.fecha) : ''}</strong>?
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteMutation.mutate(confirmDelete!.id)}
-              disabled={deleteMutation.isPending}
-            >
-              Eliminar
-            </Button>
+            <Button variant="destructive" onClick={() => deleteMutation.mutate(confirmDelete!.id)} disabled={deleteMutation.isPending}>Eliminar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

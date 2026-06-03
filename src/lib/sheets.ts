@@ -100,7 +100,7 @@ export async function getPartidos(): Promise<Partido[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A2:G',
+    range: 'Partidos!A2:H',
   });
   const rows = res.data.values ?? [];
   return rows
@@ -110,9 +110,10 @@ export async function getPartidos(): Promise<Partido[]> {
       fecha: row[1],
       equipo1: row[2] ? row[2].split(',') : [],
       equipo2: row[3] ? row[3].split(',') : [],
-      goles1: row[4] !== '' && row[4] != null ? parseInt(row[4], 10) : undefined,
-      goles2: row[5] !== '' && row[5] != null ? parseInt(row[5], 10) : undefined,
-      notas: row[6] ?? '',
+      resultado: (row[4] || undefined) as Partido['resultado'],
+      notas: row[5] ?? '',
+      destacado: row[6] ?? '',
+      rustico: row[7] ?? '',
     }));
 }
 
@@ -121,7 +122,7 @@ export async function addPartido(data: Omit<Partido, 'id'>): Promise<Partido> {
   const id = Date.now().toString();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A:G',
+    range: 'Partidos!A:H',
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
@@ -129,9 +130,10 @@ export async function addPartido(data: Omit<Partido, 'id'>): Promise<Partido> {
         data.fecha,
         data.equipo1.join(','),
         data.equipo2.join(','),
-        data.goles1 ?? '',
-        data.goles2 ?? '',
+        data.resultado ?? '',
         data.notas ?? '',
+        data.destacado ?? '',
+        data.rustico ?? '',
       ]],
     },
   });
@@ -150,7 +152,7 @@ export async function updatePartido(partido: Partido): Promise<void> {
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `Partidos!A${sheetRow}:G${sheetRow}`,
+    range: `Partidos!A${sheetRow}:H${sheetRow}`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
@@ -158,9 +160,10 @@ export async function updatePartido(partido: Partido): Promise<void> {
         partido.fecha,
         partido.equipo1.join(','),
         partido.equipo2.join(','),
-        partido.goles1 ?? '',
-        partido.goles2 ?? '',
+        partido.resultado ?? '',
         partido.notas ?? '',
+        partido.destacado ?? '',
+        partido.rustico ?? '',
       ]],
     },
   });
@@ -178,7 +181,7 @@ export async function deletePartido(id: string): Promise<void> {
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SHEET_ID,
-    range: `Partidos!A${sheetRow}:G${sheetRow}`,
+    range: `Partidos!A${sheetRow}:H${sheetRow}`,
   });
 }
 
@@ -192,7 +195,7 @@ export async function initSheets(): Promise<void> {
 
   const toCreate = [
     { title: 'Jugadores', headers: ['id', 'nombre', 'nivel', 'activo', 'apodo', 'lesionado', 'esArquero', 'puedeAtajarProximo'] },
-    { title: 'Partidos', headers: ['id', 'fecha', 'equipo1', 'equipo2', 'goles1', 'goles2', 'notas'] },
+    { title: 'Partidos', headers: ['id', 'fecha', 'equipo1', 'equipo2', 'resultado', 'notas', 'destacado', 'rustico'] },
   ];
 
   for (const sheet of toCreate) {

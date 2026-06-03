@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPartidos, addPartido, addJugador } from '@/lib/sheets';
+import type { ResultadoPartido } from '@/lib/types';
 
 export async function GET() {
   try {
@@ -15,10 +16,8 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Invitados: { id: 'invitado_N', nombre: '...' }[]
-    // Se crean en el Sheet (activo: false) y se remapean sus IDs temporales
     const invitados: { id: string; nombre: string }[] = body.invitados ?? [];
-    const idMap = new Map<string, string>(); // invitado_N → ID real del Sheet
+    const idMap = new Map<string, string>();
 
     for (const inv of invitados) {
       const creado = await addJugador({
@@ -39,9 +38,10 @@ export async function POST(req: Request) {
       fecha: body.fecha,
       equipo1: remap(body.equipo1),
       equipo2: remap(body.equipo2),
-      goles1: body.goles1 !== undefined && body.goles1 !== '' ? Number(body.goles1) : undefined,
-      goles2: body.goles2 !== undefined && body.goles2 !== '' ? Number(body.goles2) : undefined,
+      resultado: body.resultado || undefined,
       notas: body.notas ?? '',
+      destacado: body.destacado ?? '',
+      rustico: body.rustico ?? '',
     });
     return NextResponse.json(partido, { status: 201 });
   } catch (error) {

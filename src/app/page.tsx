@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import CanchaVista from '@/components/CanchaVista';
-import type { Jugador, NivelJugador, EquipoSugerido } from '@/lib/types';
+import type { Jugador, NivelJugador, EquipoSugerido, ResultadoPartido } from '@/lib/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,7 +55,7 @@ function ColumnaEquipo({
 }) {
   const nivel = nivelEquipo(jugadores);
   const borderColor =
-    ganador === true  ? 'border-green-300 bg-green-50' :
+    ganador === true  ? 'border-brand/40 bg-brand-light' :
     ganador === false ? 'border-red-200 bg-red-50' :
     puedeRecibir      ? 'border-blue-300 bg-blue-50/40' :
     haySelEnMiEquipo  ? 'border-violet-300 bg-violet-50/40' :
@@ -81,7 +81,7 @@ function ColumnaEquipo({
               onClick={() => onTap(j)}
               className={`cursor-pointer flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-left w-full transition-all
                 ${estaSeleccionado
-                  ? 'bg-green-600 text-white ring-2 ring-green-400 ring-offset-1 scale-[1.02]'
+                  ? 'bg-brand text-white ring-2 ring-brand ring-offset-1 scale-[1.02]'
                   : esTargetCross
                     ? 'bg-blue-50 border border-blue-300 text-blue-800 hover:bg-blue-100'
                   : esTargetIntra
@@ -200,8 +200,9 @@ export default function PartidoPage() {
   const [mostrarCancha, setMostrarCancha] = useState(false);
   const [mostrarResultado, setMostrarResultado] = useState(false);
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
-  const [goles1, setGoles1] = useState('');
-  const [goles2, setGoles2] = useState('');
+  const [resultado, setResultado] = useState<ResultadoPartido | ''>('');
+  const [destacado, setDestacado] = useState('');
+  const [rustico, setRustico] = useState('');
   const [notas, setNotas] = useState('');
   const [partidoGuardadoId, setPartidoGuardadoId] = useState<string | null>(null);
 
@@ -246,8 +247,6 @@ export default function PartidoPage() {
       setEquipoEditado({ equipo1: gkPrimero([...mejor.equipo1]), equipo2: gkPrimero([...mejor.equipo2]) });
       setPartidoGuardadoId(null);
       setMostrarResultado(false);
-      setGoles1('');
-      setGoles2('');
     },
     onError: () => toast.error('Error al generar equipos'),
   });
@@ -283,17 +282,18 @@ export default function PartidoPage() {
         fecha,
         equipo1: equipoEditado.equipo1.map(j => j.id),
         equipo2: equipoEditado.equipo2.map(j => j.id),
-        goles1: goles1 !== '' ? parseInt(goles1) : undefined,
-        goles2: goles2 !== '' ? parseInt(goles2) : undefined,
+        resultado: resultado || undefined,
         notas,
+        destacado,
+        rustico,
       });
     },
     onSuccess: () => {
-      toast.success('Resultado cargado');
+      toast.success('Resultado guardado');
       qc.invalidateQueries({ queryKey: ['partidos'] });
       resetear();
     },
-    onError: () => toast.error('Error al cargar resultado'),
+    onError: () => toast.error('Error al guardar resultado'),
   });
 
   function resetear() {
@@ -305,8 +305,9 @@ export default function PartidoPage() {
     setMostrarResultado(false);
     setMostrarCancha(false);
     setFecha(new Date().toISOString().split('T')[0]);
-    setGoles1('');
-    setGoles2('');
+    setResultado('');
+    setDestacado('');
+    setRustico('');
     setNotas('');
   }
 
@@ -329,7 +330,7 @@ export default function PartidoPage() {
           <CardTitle className="text-base flex items-center justify-between">
             <span className="flex items-center gap-2"><Users size={16} /> ¿Quiénes juegan?</span>
             {totalJugadores > 0 && (
-              <span className="text-sm font-semibold text-green-600">{totalJugadores} seleccionados</span>
+              <span className="text-sm font-semibold text-brand">{totalJugadores} seleccionados</span>
             )}
           </CardTitle>
         </CardHeader>
@@ -351,7 +352,7 @@ export default function PartidoPage() {
                       onClick={() => toggleAsistente(j.id)}
                       className={`cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
                         sel
-                          ? 'bg-green-600 text-white border-green-600'
+                          ? 'bg-brand text-white border-brand'
                           : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                       }`}
                     >
@@ -419,7 +420,7 @@ export default function PartidoPage() {
 
       {/* Botón generar */}
       <Button
-        className="w-full gap-2 bg-green-600 hover:bg-green-700"
+        className="w-full gap-2 bg-brand hover:bg-brand-hover"
         disabled={totalJugadores < 4 || generarMutation.isPending}
         onClick={() => generarMutation.mutate()}
       >
@@ -442,7 +443,7 @@ export default function PartidoPage() {
               </CardTitle>
               <button
                 onClick={() => setMostrarCancha(v => !v)}
-                className="cursor-pointer text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium"
+                className="cursor-pointer text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-light text-brand hover:bg-brand-light font-medium"
               >
                 <Telescope size={13} />
                 {mostrarCancha ? 'Ocultar cancha' : 'Ver en cancha'}
@@ -472,7 +473,7 @@ export default function PartidoPage() {
               </div>
             </div>
             <Button
-              className="w-full gap-2 bg-green-600 hover:bg-green-700"
+              className="w-full gap-2 bg-brand hover:bg-brand-hover"
               onClick={() => guardarFormacionMutation.mutate()}
               disabled={guardarFormacionMutation.isPending}
             >
@@ -485,16 +486,16 @@ export default function PartidoPage() {
 
       {/* Formación guardada — cargar resultado */}
       {partidoGuardadoId && equipoEditado && (
-        <Card className="border-green-200 bg-green-50/40">
+        <Card className="border-brand/30 bg-brand-light/40">
           <CardContent className="py-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-green-700">
+              <div className="flex items-center gap-2 text-brand">
                 <CheckCircle2 size={16} />
                 <span className="text-sm font-semibold">Formación guardada</span>
               </div>
               <button
                 onClick={() => setMostrarCancha(v => !v)}
-                className="cursor-pointer text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-green-200 text-green-800 hover:bg-green-300 font-medium"
+                className="cursor-pointer text-xs flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-light text-brand hover:bg-brand-light font-medium"
               >
                 <Telescope size={13} />
                 {mostrarCancha ? 'Ver lista' : 'Ver cancha'}
@@ -508,8 +509,8 @@ export default function PartidoPage() {
                 equipo1={equipoEditado.equipo1}
                 equipo2={equipoEditado.equipo2}
                 onChange={(e1, e2) => setEquipoEditado({ equipo1: e1, equipo2: e2 })}
-                goles1={goles1}
-                goles2={goles2}
+                goles1=""
+                goles2=""
               />
             )}
 
@@ -522,22 +523,63 @@ export default function PartidoPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <Label className="text-xs">Goles A</Label>
-                    <Input type="number" min={0} value={goles1} onChange={e => setGoles1(e.target.value)} placeholder="0" className="mt-1" />
-                  </div>
-                  <span className="text-xl font-bold text-slate-400 mt-4">–</span>
-                  <div className="flex-1">
-                    <Label className="text-xs">Goles B</Label>
-                    <Input type="number" min={0} value={goles2} onChange={e => setGoles2(e.target.value)} placeholder="0" className="mt-1" />
+                {/* Resultado */}
+                <div>
+                  <Label className="text-xs">Resultado</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    {(['A', 'empate', 'B'] as const).map(r => (
+                      <button
+                        key={r}
+                        onClick={() => setResultado(prev => prev === r ? '' : r)}
+                        className={`cursor-pointer py-2 rounded-lg text-sm font-semibold border transition-all ${
+                          resultado === r
+                            ? r === 'A' ? 'bg-white border-white text-slate-800 ring-2 ring-slate-400'
+                              : r === 'B' ? 'bg-brand border-brand text-white ring-2 ring-brand'
+                              : 'bg-slate-200 border-slate-300 text-slate-700 ring-2 ring-slate-400'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-400'
+                        }`}
+                      >
+                        {r === 'A' ? '🤍 Ganó A' : r === 'B' ? '💚 Ganó B' : '🤝 Empate'}
+                      </button>
+                    ))}
                   </div>
                 </div>
+
+                {/* Destacado y Rústico */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">⭐ Destacado (opcional)</Label>
+                    <select
+                      value={destacado}
+                      onChange={e => setDestacado(e.target.value)}
+                      className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none focus:border-brand"
+                    >
+                      <option value="">—</option>
+                      {equipoEditado && [...equipoEditado.equipo1, ...equipoEditado.equipo2].map(j => (
+                        <option key={j.id} value={j.id}>{j.apodo || j.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">🪨 Rústico (opcional)</Label>
+                    <select
+                      value={rustico}
+                      onChange={e => setRustico(e.target.value)}
+                      className="mt-1 w-full text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white outline-none focus:border-orange-400"
+                    >
+                      <option value="">—</option>
+                      {equipoEditado && [...equipoEditado.equipo1, ...equipoEditado.equipo2].map(j => (
+                        <option key={j.id} value={j.id}>{j.apodo || j.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <Button
                     className="flex-1 gap-1.5"
                     onClick={() => guardarResultadoMutation.mutate()}
-                    disabled={guardarResultadoMutation.isPending || goles1 === '' || goles2 === ''}
+                    disabled={guardarResultadoMutation.isPending}
                   >
                     <Save size={15} />
                     {guardarResultadoMutation.isPending ? 'Guardando...' : 'Guardar resultado'}

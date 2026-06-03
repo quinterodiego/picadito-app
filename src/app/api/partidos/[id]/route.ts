@@ -10,9 +10,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       fecha: body.fecha,
       equipo1: body.equipo1,
       equipo2: body.equipo2,
-      goles1: body.goles1 !== undefined && body.goles1 !== '' ? Number(body.goles1) : undefined,
-      goles2: body.goles2 !== undefined && body.goles2 !== '' ? Number(body.goles2) : undefined,
+      resultado: body.resultado || undefined,
       notas: body.notas ?? '',
+      destacado: body.destacado ?? '',
+      rustico: body.rustico ?? '',
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

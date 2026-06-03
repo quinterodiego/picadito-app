@@ -14,6 +14,14 @@
 }
 
 @theme inline {
+  /* ── Colores de marca ──────────────────────── */
+  --color-brand:          #17902e;
+  --color-brand-hover:    #126824;
+  --color-brand-light:    #e8f7ec;
+  --color-accent:         #f1eb4f;
+  --color-accent-hover:   #d9d33c;
+  --color-accent-dark:    #7a7610;
+  /* ─────────────────────────────────────────── */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-outfit);
