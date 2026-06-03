@@ -8,8 +8,8 @@ import { Toaster } from '@/components/ui/sonner';
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 
 export const metadata: Metadata = {
-  title: 'Picadito App',
-  description: 'Armá los equipos del picado semanal',
+  title: 'No Cazo Un Fulbo',
+  description: 'La app para organizar el fulbo con amigos.',
 };
 
 export const viewport: Viewport = {
