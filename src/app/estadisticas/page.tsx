@@ -81,6 +81,10 @@ export default function EstadisticasPage() {
   const { jugadores, partidos, loading } = useData();
   const jugMap = useMemo(() => new Map(jugadores.map(j => [j.id, j])), [jugadores]);
   const stats = useMemo(() => calcStats(jugadores, partidos), [jugadores, partidos]);
+  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
+
+  const toggle = (key: string) => setExpandido(p => ({ ...p, [key]: !p[key] }));
+  const slice = (key: string, arr: typeof stats) => expandido[key] ? arr : arr.slice(0, 5);
 
   if (loading) return <p className="text-sm text-slate-400 text-center py-8">Cargando...</p>;
   if (partidos.filter(p => p.resultado).length === 0) return (
@@ -89,10 +93,6 @@ export default function EstadisticasPage() {
       <p className="text-sm text-slate-400 text-center py-8">Registrá partidos para ver las estadísticas.</p>
     </div>
   );
-
-  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
-  const toggle = (key: string) => setExpandido(p => ({ ...p, [key]: !p[key] }));
-  const slice = (key: string, arr: typeof stats) => expandido[key] ? arr : arr.slice(0, 5);
 
   const allAsistencia = [...stats].sort((a, b) => b.jugados - a.jugados);
   const allGanadores  = [...stats].filter(s => s.victorias > 0).sort((a, b) => pct(b.victorias, b.jugados) - pct(a.victorias, a.jugados));
