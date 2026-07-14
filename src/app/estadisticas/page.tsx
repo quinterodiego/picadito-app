@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Trophy, Users, Star, Swords } from 'lucide-react';
@@ -90,10 +90,14 @@ export default function EstadisticasPage() {
     </div>
   );
 
-  const topAsistencia = [...stats].sort((a, b) => b.jugados - a.jugados).slice(0, 5);
-  const topGanadores = [...stats].filter(s => s.victorias > 0).sort((a, b) => pct(b.victorias, b.jugados) - pct(a.victorias, a.jugados)).slice(0, 5);
-  const topDestacados = [...stats].filter(s => s.destacados > 0).sort((a, b) => b.destacados - a.destacados).slice(0, 5);
-  const topRusticos = [...stats].filter(s => s.rusticos > 0).sort((a, b) => b.rusticos - a.rusticos).slice(0, 5);
+  const [expandido, setExpandido] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) => setExpandido(p => ({ ...p, [key]: !p[key] }));
+  const slice = (key: string, arr: typeof stats) => expandido[key] ? arr : arr.slice(0, 5);
+
+  const allAsistencia = [...stats].sort((a, b) => b.jugados - a.jugados);
+  const allGanadores  = [...stats].filter(s => s.victorias > 0).sort((a, b) => pct(b.victorias, b.jugados) - pct(a.victorias, a.jugados));
+  const allDestacados = [...stats].filter(s => s.destacados > 0).sort((a, b) => b.destacados - a.destacados);
+  const allRusticos   = [...stats].filter(s => s.rusticos > 0).sort((a, b) => b.rusticos - a.rusticos);
 
   return (
     <div className="space-y-4">
@@ -136,8 +140,8 @@ export default function EstadisticasPage() {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Trophy size={14} className="text-yellow-500" /> Más victorias (%)</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {topGanadores.length === 0 ? <p className="text-xs text-slate-400">Sin partidos con resultado.</p> :
-                topGanadores.map((s, i) => (
+              {allGanadores.length === 0 ? <p className="text-xs text-slate-400">Sin partidos con resultado.</p> : <>
+                {slice('ganadores', allGanadores).map((s, i) => (
                   <div key={s.jugador.id} className="flex items-center gap-2 text-sm">
                     <span className="w-5 text-slate-400 text-xs">{i + 1}.</span>
                     <span className="flex-1">{s.jugador.apodo || s.jugador.nombre}</span>
@@ -145,13 +149,19 @@ export default function EstadisticasPage() {
                     <span className="text-xs text-slate-400">({s.jugados}p)</span>
                   </div>
                 ))}
+                {allGanadores.length > 5 && (
+                  <button onClick={() => toggle('ganadores')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
+                    {expandido.ganadores ? 'Ver menos ↑' : `Ver todos (${allGanadores.length}) ↓`}
+                  </button>
+                )}
+              </>}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Users size={14} className="text-blue-500" /> Más asistencia</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {topAsistencia.map((s, i) => (
+              {slice('asistencia', allAsistencia).map((s, i) => (
                 <div key={s.jugador.id} className="flex items-center gap-2 text-sm">
                   <span className="w-5 text-slate-400 text-xs">{i + 1}.</span>
                   <span className="flex-1">{s.jugador.apodo || s.jugador.nombre}</span>
@@ -159,35 +169,50 @@ export default function EstadisticasPage() {
                   <span className="text-xs text-slate-400">partidos</span>
                 </div>
               ))}
+              {allAsistencia.length > 5 && (
+                <button onClick={() => toggle('asistencia')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
+                  {expandido.asistencia ? 'Ver menos ↑' : `Ver todos (${allAsistencia.length}) ↓`}
+                </button>
+              )}
             </CardContent>
           </Card>
 
-          {topDestacados.length > 0 && (
+          {allDestacados.length > 0 && (
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Star size={14} className="text-yellow-500" /> Más veces destacado</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {topDestacados.map((s, i) => (
+                {slice('destacados', allDestacados).map((s, i) => (
                   <div key={s.jugador.id} className="flex items-center gap-2 text-sm">
                     <span className="w-5 text-slate-400 text-xs">{i + 1}.</span>
                     <span className="flex-1">{s.jugador.apodo || s.jugador.nombre}</span>
                     <span className="font-bold text-yellow-600">⭐ {s.destacados}x</span>
                   </div>
                 ))}
+                {allDestacados.length > 5 && (
+                  <button onClick={() => toggle('destacados')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
+                    {expandido.destacados ? 'Ver menos ↑' : `Ver todos (${allDestacados.length}) ↓`}
+                  </button>
+                )}
               </CardContent>
             </Card>
           )}
 
-          {topRusticos.length > 0 && (
+          {allRusticos.length > 0 && (
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Swords size={14} className="text-orange-500" /> Más veces rústico</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {topRusticos.map((s, i) => (
+                {slice('rusticos', allRusticos).map((s, i) => (
                   <div key={s.jugador.id} className="flex items-center gap-2 text-sm">
                     <span className="w-5 text-slate-400 text-xs">{i + 1}.</span>
                     <span className="flex-1">{s.jugador.apodo || s.jugador.nombre}</span>
                     <span className="font-bold text-orange-600">🪨 {s.rusticos}x</span>
                   </div>
                 ))}
+                {allRusticos.length > 5 && (
+                  <button onClick={() => toggle('rusticos')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
+                    {expandido.rusticos ? 'Ver menos ↑' : `Ver todos (${allRusticos.length}) ↓`}
+                  </button>
+                )}
               </CardContent>
             </Card>
           )}
