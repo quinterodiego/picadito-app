@@ -32,7 +32,8 @@ function calcStats(jugadores: Jugador[], partidos: Partido[]) {
   }
 
   for (const p of partidos) {
-    const res = p.resultado ?? null;
+    if (!p.resultado) continue;
+    const res = p.resultado;
 
     const procesarEquipo = (ids: string[], rival: string[], esGanador: boolean | null) => {
       for (const id of ids) {
@@ -82,7 +83,7 @@ export default function EstadisticasPage() {
   const stats = useMemo(() => calcStats(jugadores, partidos), [jugadores, partidos]);
 
   if (loading) return <p className="text-sm text-slate-400 text-center py-8">Cargando...</p>;
-  if (partidos.length === 0) return (
+  if (partidos.filter(p => p.resultado).length === 0) return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Estadísticas</h1>
       <p className="text-sm text-slate-400 text-center py-8">Registrá partidos para ver las estadísticas.</p>
@@ -97,7 +98,7 @@ export default function EstadisticasPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Estadísticas</h1>
-      <p className="text-xs text-slate-400">{partidos.length} partidos registrados</p>
+      <p className="text-xs text-slate-400">{partidos.filter(p => p.resultado).length} partidos jugados</p>
 
       <Tabs defaultValue="jugadores">
         <TabsList className="w-full">
