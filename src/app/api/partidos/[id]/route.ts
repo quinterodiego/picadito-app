@@ -14,6 +14,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       notas: body.notas ?? '',
       destacado: body.destacado ?? '',
       rustico: body.rustico ?? '',
+      formacion1: body.formacion1 || undefined,
+      formacion2: body.formacion2 || undefined,
+      posiciones1: body.posiciones1 || undefined,
+      posiciones2: body.posiciones2 || undefined,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

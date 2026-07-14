@@ -100,7 +100,7 @@ export async function getPartidos(): Promise<Partido[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A2:H',
+    range: 'Partidos!A2:L',
   });
   const rows = res.data.values ?? [];
   return rows
@@ -114,6 +114,10 @@ export async function getPartidos(): Promise<Partido[]> {
       notas: row[5] ?? '',
       destacado: row[6] ?? '',
       rustico: row[7] ?? '',
+      formacion1: row[8] || undefined,
+      formacion2: row[9] || undefined,
+      posiciones1: row[10] ? JSON.parse(row[10]) : undefined,
+      posiciones2: row[11] ? JSON.parse(row[11]) : undefined,
     }));
 }
 
@@ -122,7 +126,7 @@ export async function addPartido(data: Omit<Partido, 'id'>): Promise<Partido> {
   const id = Date.now().toString();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A:H',
+    range: 'Partidos!A:L',
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
@@ -134,6 +138,10 @@ export async function addPartido(data: Omit<Partido, 'id'>): Promise<Partido> {
         data.notas ?? '',
         data.destacado ?? '',
         data.rustico ?? '',
+        data.formacion1 ?? '',
+        data.formacion2 ?? '',
+        data.posiciones1 ? JSON.stringify(data.posiciones1) : '',
+        data.posiciones2 ? JSON.stringify(data.posiciones2) : '',
       ]],
     },
   });
@@ -152,7 +160,7 @@ export async function updatePartido(partido: Partido): Promise<void> {
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `Partidos!A${sheetRow}:H${sheetRow}`,
+    range: `Partidos!A${sheetRow}:L${sheetRow}`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
@@ -164,6 +172,10 @@ export async function updatePartido(partido: Partido): Promise<void> {
         partido.notas ?? '',
         partido.destacado ?? '',
         partido.rustico ?? '',
+        partido.formacion1 ?? '',
+        partido.formacion2 ?? '',
+        partido.posiciones1 ? JSON.stringify(partido.posiciones1) : '',
+        partido.posiciones2 ? JSON.stringify(partido.posiciones2) : '',
       ]],
     },
   });

@@ -22,6 +22,10 @@ export interface Partido {
   notas?: string;
   destacado?: string; // player ID
   rustico?: string;   // player ID
+  formacion1?: string; // e.g. "1-3-3-1"
+  formacion2?: string;
+  posiciones1?: [number, number][]; // normalized (xr, yr) per player
+  posiciones2?: [number, number][];
 }
 
 export interface EquipoSugerido {

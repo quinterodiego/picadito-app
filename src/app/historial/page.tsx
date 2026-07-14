@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Trash2, Trophy, Minus, Pencil, ArrowRight, X, UserPlus } from 'lucide-react';
+import { Trash2, Trophy, Minus, Pencil, ArrowRight, X, UserPlus, Telescope } from 'lucide-react';
+import CanchaVista from '@/components/CanchaVista';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -173,6 +174,7 @@ function EditPartidoDialog({
 export default function HistorialPage() {
   const [confirmDelete, setConfirmDelete] = useState<Partido | null>(null);
   const [editando, setEditando] = useState<Partido | null>(null);
+  const [canchaAbierta, setCanchaAbierta] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const { data: jugadores = [] } = useJugadores();
@@ -191,7 +193,13 @@ export default function HistorialPage() {
 
   const editMutation = useMutation({
     mutationFn: (data: { fecha: string; equipo1: string[]; equipo2: string[]; resultado?: ResultadoPartido; notas: string; destacado: string; rustico: string }) =>
-      axios.put(`/api/partidos/${editando!.id}`, data),
+      axios.put(`/api/partidos/${editando!.id}`, {
+        ...data,
+        formacion1: editando!.formacion1,
+        formacion2: editando!.formacion2,
+        posiciones1: editando!.posiciones1,
+        posiciones2: editando!.posiciones2,
+      }),
     onSuccess: () => { toast.success('Partido actualizado'); qc.invalidateQueries({ queryKey: ['partidos'] }); setEditando(null); },
     onError: () => toast.error('Error al actualizar partido'),
   });
@@ -222,10 +230,29 @@ export default function HistorialPage() {
                     <ResultadoBadge resultado={p.resultado} />
                   </div>
                   <div className="flex items-center gap-1">
+                    {p.posiciones1 && (
+                      <button
+                        onClick={() => setCanchaAbierta(v => v === p.id ? null : p.id)}
+                        className={`cursor-pointer p-1.5 rounded-lg text-slate-300 hover:text-brand hover:bg-brand-light transition-colors ${canchaAbierta === p.id ? 'text-brand bg-brand-light' : ''}`}
+                      >
+                        <Telescope size={15} />
+                      </button>
+                    )}
                     <button onClick={() => setEditando(p)} className="cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-600"><Pencil size={15} /></button>
                     <button onClick={() => setConfirmDelete(p)} className="cursor-pointer p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-400"><Trash2 size={15} /></button>
                   </div>
                 </div>
+
+                {canchaAbierta === p.id && p.posiciones1 && (
+                  <CanchaVista
+                    equipo1={p.equipo1.map(id => jugMap.get(id)).filter(Boolean) as import('@/lib/types').Jugador[]}
+                    equipo2={p.equipo2.map(id => jugMap.get(id)).filter(Boolean) as import('@/lib/types').Jugador[]}
+                    initialFormacion1={p.formacion1}
+                    initialFormacion2={p.formacion2}
+                    initialPos1={p.posiciones1}
+                    initialPos2={p.posiciones2}
+                  />
+                )}
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className={`rounded-lg p-2 ${p.resultado === 'A' ? 'bg-yellow-50 border border-yellow-200' : 'bg-slate-50'}`}>

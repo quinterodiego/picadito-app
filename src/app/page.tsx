@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import CanchaVista from '@/components/CanchaVista';
+import CanchaVista, { type CanchaState } from '@/components/CanchaVista';
 import type { Jugador, NivelJugador, EquipoSugerido, ResultadoPartido } from '@/lib/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -205,6 +205,7 @@ export default function PartidoPage() {
   const [rustico, setRustico] = useState('');
   const [notas, setNotas] = useState('');
   const [partidoGuardadoId, setPartidoGuardadoId] = useState<string | null>(null);
+  const canchaStateRef = useRef<CanchaState | null>(null);
 
   const qc = useQueryClient();
 
@@ -258,12 +259,17 @@ export default function PartidoPage() {
   const guardarFormacionMutation = useMutation({
     mutationFn: () => {
       if (!equipoEditado) throw new Error();
+      const cs = canchaStateRef.current;
       return axios.post<{ id: string }>('/api/partidos', {
         fecha,
         equipo1: equipoEditado.equipo1.map(j => j.id),
         equipo2: equipoEditado.equipo2.map(j => j.id),
         invitados: invitadosPayload(),
         notas,
+        formacion1: cs?.formacion1,
+        formacion2: cs?.formacion2,
+        posiciones1: cs?.pos1,
+        posiciones2: cs?.pos2,
       }).then(r => r.data);
     },
     onSuccess: data => {
@@ -278,6 +284,7 @@ export default function PartidoPage() {
   const guardarResultadoMutation = useMutation({
     mutationFn: () => {
       if (!partidoGuardadoId || !equipoEditado) throw new Error();
+      const cs = canchaStateRef.current;
       return axios.put(`/api/partidos/${partidoGuardadoId}`, {
         fecha,
         equipo1: equipoEditado.equipo1.map(j => j.id),
@@ -286,6 +293,10 @@ export default function PartidoPage() {
         notas,
         destacado,
         rustico,
+        formacion1: cs?.formacion1,
+        formacion2: cs?.formacion2,
+        posiciones1: cs?.pos1,
+        posiciones2: cs?.pos2,
       });
     },
     onSuccess: () => {
@@ -452,7 +463,7 @@ export default function PartidoPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {mostrarCancha ? (
-              <CanchaVista equipo1={equipoEditado.equipo1} equipo2={equipoEditado.equipo2} />
+              <CanchaVista equipo1={equipoEditado.equipo1} equipo2={equipoEditado.equipo2} onStateChange={s => { canchaStateRef.current = s; }} />
             ) : (
               <EditorEquipos
                 equipo1={equipoEditado.equipo1}
@@ -503,7 +514,7 @@ export default function PartidoPage() {
             </div>
 
             {mostrarCancha ? (
-              <CanchaVista equipo1={equipoEditado.equipo1} equipo2={equipoEditado.equipo2} />
+              <CanchaVista equipo1={equipoEditado.equipo1} equipo2={equipoEditado.equipo2} onStateChange={s => { canchaStateRef.current = s; }} />
             ) : (
               <EditorEquipos
                 equipo1={equipoEditado.equipo1}
