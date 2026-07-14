@@ -121,7 +121,7 @@ export default function CanchaVista({ equipo1, equipo2 }: { equipo1: Jugador[]; 
   }
 
   // ─── SVG renderer (portrait & landscape) ────────────────────────────────────
-  function renderSvg(landscape: boolean, ref: React.RefObject<SVGSVGElement>) {
+  function renderSvg(landscape: boolean, ref: React.RefObject<SVGSVGElement | null>) {
     // Dimensions
     const W  = landscape ? 440 : 280;
     const H  = landscape ? 272 : 430;
