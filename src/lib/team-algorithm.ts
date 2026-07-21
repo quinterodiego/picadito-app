@@ -63,7 +63,13 @@ export function generarEquipos(
   const maxFam = 2 * nPairs * totalPartidos;
   const maxVit = 2 * nPairs * totalVictorias;
 
-  const scored = combinations(asistentes, mitad).map(eq1 => {
+  // Anclar asistentes[0] siempre en eq1 → elimina duplicados (A vs B = B vs A)
+  // Reduce C(n,mitad) a C(n-1, mitad-1), cada partido aparece exactamente una vez
+  const resto  = asistentes.slice(1);
+  const scored = combinations(resto, mitad - 1).map(c => {
+    const eq1 = [asistentes[0], ...c];
+    return eq1;
+  }).map(eq1 => {
     const eq2  = asistentes.filter(j => !eq1.includes(j));
     const ids1 = eq1.map(j => j.id);
     const ids2 = eq2.map(j => j.id);
@@ -90,8 +96,9 @@ export function generarEquipos(
 
   // Paso 2: dentro del pool balanceado, ordenar por rotación + victorias juntos
   // (menor = pares que menos han jugado juntos y menos han ganado juntos → más variado)
+  // Victorias juntos pesan el doble que rotación general
   pool.sort((a, b) =>
-    (a.scoreRotacion + a.scoreVictorias) - (b.scoreRotacion + b.scoreVictorias),
+    (a.scoreRotacion + 2 * a.scoreVictorias) - (b.scoreRotacion + 2 * b.scoreVictorias),
   );
 
   return pool.slice(0, 3).map(s => ({
