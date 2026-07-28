@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { createGrupo, addMiembro, unirseConCodigo } from '@/lib/sheets';
+import { createGrupo, addMiembro, unirseConCodigo, migrateExistingDataToGroup } from '@/lib/sheets';
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -18,5 +18,7 @@ export async function POST(req: Request) {
   // Crear grupo
   const { id: groupId, inviteCode } = await createGrupo({ nombre: body.nombre || 'Mi Grupo', adminId: userId });
   await addMiembro(groupId, userId, 'admin');
+  // Claim any pre-existing rows that have no group_id (first-user migration)
+  await migrateExistingDataToGroup(groupId);
   return NextResponse.json({ groupId, inviteCode }, { status: 201 });
 }

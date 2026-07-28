@@ -16,9 +16,14 @@ export default function GrupoInicioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Force JWT refresh on mount to detect stale token
+  // Ensure Sheets tabs exist, then refresh JWT to pick up userId
   useEffect(() => {
-    update().finally(() => setChecking(false));
+    async function init() {
+      try { await axios.post('/api/setup'); } catch { /* idempotent — ok if already done */ }
+      await update();
+      setChecking(false);
+    }
+    init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

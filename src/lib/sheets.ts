@@ -350,7 +350,9 @@ export async function deletePartido(groupId: string, id: string): Promise<void> 
 
 // ─── Setup + Migration ────────────────────────────────────────────────────────
 
-export async function initSheets(): Promise<{ migrated: boolean; groupId?: string }> {
+// Creates Usuarios/Grupos/Miembros tabs and adds group_id headers to Jugadores/Partidos.
+// Does NOT create any group or migrate data — call migrateExistingDataToGroup for that.
+export async function initSheets(): Promise<void> {
   const sheets = await getSheetsClient();
 
   const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
@@ -406,85 +408,46 @@ export async function initSheets(): Promise<{ migrated: boolean; groupId?: strin
       }
     }
   }
+}
 
-  // Check if migration is needed
-  const jugadoresRes = await sheets.spreadsheets.values.get({
+// Assigns all Jugadores/Partidos rows that have no group_id to the given groupId.
+// Called when the first user creates their group to claim pre-existing data.
+export async function migrateExistingDataToGroup(groupId: string): Promise<{ jugadores: number; partidos: number }> {
+  const sheets = await getSheetsClient();
+  let jugadoresMigrated = 0;
+  let partidosMigrated = 0;
+
+  const jugRes = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
     range: 'Jugadores!A2:I',
   });
-  const jugadoresRows = jugadoresRes.data.values ?? [];
-  const jugadoresNeedingMigration = jugadoresRows
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => row[0] && !row[8]);
-
-  const partidosRes = await sheets.spreadsheets.values.get({
-    spreadsheetId: SHEET_ID,
-    range: 'Partidos!A2:M',
-  });
-  const partidosRows = partidosRes.data.values ?? [];
-  const partidosNeedingMigration = partidosRows
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => row[0] && !row[12]);
-
-  const needsMigration = jugadoresNeedingMigration.length > 0 || partidosNeedingMigration.length > 0;
-
-  if (!needsMigration) {
-    return { migrated: false };
-  }
-
-  // Read old Config tab if it exists
-  let grupoNombre = 'Mi Grupo';
-  let grupoImagen: string | undefined;
-  let adminEmail = 'admin@setup.local';
-
-  if (existingSheets.includes('Config')) {
-    try {
-      const configRes = await sheets.spreadsheets.values.get({
+  for (const [idx, row] of (jugRes.data.values ?? []).entries()) {
+    if (row[0] && !row[8]) {
+      await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: 'Config!A:B',
+        range: `Jugadores!I${idx + 2}`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [[groupId]] },
       });
-      const configRows = configRes.data.values ?? [];
-      const configMap = Object.fromEntries(
-        configRows.filter(r => r[0]).map(r => [r[0], r[1] ?? ''])
-      );
-      if (configMap['grupo_nombre']) grupoNombre = configMap['grupo_nombre'];
-      if (configMap['grupo_imagen']) grupoImagen = configMap['grupo_imagen'];
-      if (configMap['admin_email']) adminEmail = configMap['admin_email'];
-    } catch {
-      // Config tab may not be readable, use defaults
+      jugadoresMigrated++;
     }
   }
 
-  const adminId = await getOrCreateUsuario(adminEmail, 'Admin');
-  const { id: groupId } = await createGrupo({ nombre: grupoNombre, adminId });
-
-  if (grupoImagen) {
-    await updateGrupo(groupId, { imagen: grupoImagen });
+  const parRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Partidos!A2:M',
+  });
+  for (const [idx, row] of (parRes.data.values ?? []).entries()) {
+    if (row[0] && !row[12]) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SHEET_ID,
+        range: `Partidos!M${idx + 2}`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [[groupId]] },
+      });
+      partidosMigrated++;
+    }
   }
 
-  await addMiembro(groupId, adminId, 'admin');
-
-  // Migrate Jugadores rows — write groupId to col I
-  for (const { idx } of jugadoresNeedingMigration) {
-    const sheetRow = idx + 2;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `Jugadores!I${sheetRow}`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [[groupId]] },
-    });
-  }
-
-  // Migrate Partidos rows — write groupId to col M
-  for (const { idx } of partidosNeedingMigration) {
-    const sheetRow = idx + 2;
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID,
-      range: `Partidos!M${sheetRow}`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [[groupId]] },
-    });
-  }
-
-  return { migrated: true, groupId };
+  return { jugadores: jugadoresMigrated, partidos: partidosMigrated };
 }
