@@ -16,18 +16,23 @@ export default function GrupoInicioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Ensure Sheets tabs exist, then refresh JWT to pick up userId
+  // Ensure Sheets tabs exist, then refresh JWT to pick up userId + groupId
   useEffect(() => {
     async function init() {
-      try { await axios.post('/api/setup'); } catch { /* idempotent — ok if already done */ }
-      await update();
+      try { await axios.post('/api/setup'); } catch { /* idempotent */ }
+      const updated = await update();
+      // If the JWT refresh already found a group, redirect immediately
+      if (updated?.user?.groupId) {
+        router.replace('/');
+        return;
+      }
       setChecking(false);
     }
     init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Redirect if already has group
+  // Redirect if already has group (catches reactive session updates)
   useEffect(() => {
     if (session?.user?.groupId) router.replace('/');
   }, [session?.user?.groupId, router]);
