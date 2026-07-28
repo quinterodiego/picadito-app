@@ -94,8 +94,10 @@ export default function EstadisticasPage() {
     </div>
   );
 
+  const pts = (s: typeof stats[number]) => s.victorias * 3 + s.empates;
+
+  const allPuntos    = [...stats].sort((a, b) => pts(b) - pts(a) || b.jugados - a.jugados);
   const allAsistencia = [...stats].sort((a, b) => b.jugados - a.jugados);
-  const allGanadores  = [...stats].filter(s => s.victorias > 0).sort((a, b) => pct(b.victorias, b.jugados) - pct(a.victorias, a.jugados));
   const allDestacados = [...stats].filter(s => s.destacados > 0).sort((a, b) => b.destacados - a.destacados);
   const allRusticos   = [...stats].filter(s => s.rusticos > 0).sort((a, b) => b.rusticos - a.rusticos);
 
@@ -151,20 +153,20 @@ export default function EstadisticasPage() {
         {/* Tab: Ranking */}
         <TabsContent value="ranking" className="space-y-3 mt-3">
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Trophy size={14} className="text-yellow-500" /> Más victorias (%)</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Trophy size={14} className="text-yellow-500" /> Tabla de puntos</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {allGanadores.length === 0 ? <p className="text-xs text-slate-400">Sin partidos con resultado.</p> : <>
-                {slice('ganadores', allGanadores).map((s, i) => (
+              {allPuntos.length === 0 ? <p className="text-xs text-slate-400">Sin partidos con resultado.</p> : <>
+                {slice('puntos', allPuntos).map((s, i) => (
                   <div key={s.jugador.id} className="flex items-center gap-2 text-sm">
                     <span className="w-5 text-slate-400 text-xs">{i + 1}.</span>
                     <span className="flex-1">{s.jugador.apodo || s.jugador.nombre}</span>
-                    <span className="font-bold text-brand">{pct(s.victorias, s.jugados)}%</span>
-                    <span className="text-xs text-slate-400">({s.jugados}p)</span>
+                    <span className="text-xs text-slate-400">{s.victorias}G {s.empates}E {s.derrotas}P</span>
+                    <span className="font-bold text-brand w-10 text-right">{pts(s)} pts</span>
                   </div>
                 ))}
-                {allGanadores.length > 5 && (
-                  <button onClick={() => toggle('ganadores')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
-                    {expandido.ganadores ? 'Ver menos ↑' : `Ver todos (${allGanadores.length}) ↓`}
+                {allPuntos.length > 5 && (
+                  <button onClick={() => toggle('puntos')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
+                    {expandido.puntos ? 'Ver menos ↑' : `Ver todos (${allPuntos.length}) ↓`}
                   </button>
                 )}
               </>}
