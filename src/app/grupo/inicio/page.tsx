@@ -72,9 +72,9 @@ export default function GrupoInicioPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-6">
-      <div className="text-center">
+      <div className="text-center space-y-1">
         <h1 className="text-2xl font-black text-brand">Configurá tu grupo</h1>
-        <p className="text-sm text-slate-400 mt-1">Creá uno nuevo o unite a un grupo existente.</p>
+        <p className="text-sm text-slate-400">Si ya tenías datos cargados, hacé click en <strong>Crear grupo</strong> y se van a recuperar automáticamente.</p>
       </div>
 
       <p className="text-xs text-slate-400">
