@@ -410,10 +410,27 @@ export async function initSheets(): Promise<void> {
   }
 }
 
-// Assigns all Jugadores/Partidos rows that have no group_id to the given groupId.
-// Called when the first user creates their group to claim pre-existing data.
+// Assigns rows that have no group_id to the given groupId.
+// Used at group-creation time for the first user.
 export async function migrateExistingDataToGroup(groupId: string): Promise<{ jugadores: number; partidos: number }> {
+  return migrateOrphanedDataToGroup(groupId);
+}
+
+// Assigns rows that have no group_id OR belong to a group that no longer exists
+// (orphaned by a previous failed migration) to the given groupId.
+// Safe for multi-tenant: rows belonging to a valid group are never touched.
+export async function migrateOrphanedDataToGroup(groupId: string): Promise<{ jugadores: number; partidos: number }> {
   const sheets = await getSheetsClient();
+
+  // Collect all currently valid group IDs
+  const gruposRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Grupos!A2:A',
+  });
+  const validGroupIds = new Set(
+    (gruposRes.data.values ?? []).map(r => r[0]).filter(Boolean)
+  );
+
   let jugadoresMigrated = 0;
   let partidosMigrated = 0;
 
@@ -422,7 +439,7 @@ export async function migrateExistingDataToGroup(groupId: string): Promise<{ jug
     range: 'Jugadores!A2:I',
   });
   for (const [idx, row] of (jugRes.data.values ?? []).entries()) {
-    if (row[0] && !row[8]) {
+    if (row[0] && (!row[8] || !validGroupIds.has(row[8]))) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `Jugadores!I${idx + 2}`,
@@ -438,7 +455,7 @@ export async function migrateExistingDataToGroup(groupId: string): Promise<{ jug
     range: 'Partidos!A2:M',
   });
   for (const [idx, row] of (parRes.data.values ?? []).entries()) {
-    if (row[0] && !row[12]) {
+    if (row[0] && (!row[12] || !validGroupIds.has(row[12]))) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
         range: `Partidos!M${idx + 2}`,

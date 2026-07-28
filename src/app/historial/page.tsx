@@ -170,6 +170,39 @@ function EditPartidoDialog({
   );
 }
 
+// ─── Empty state con recuperación de datos ───────────────────────────────────
+function EmptyHistorial({ onRecover }: { onRecover: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function recover() {
+    setLoading(true);
+    try {
+      await axios.post('/api/setup');
+      setDone(true);
+      onRecover();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (done) return <p className="text-sm text-slate-400 text-center py-8">Datos recuperados. Recargá la página si no aparecen.</p>;
+
+  return (
+    <div className="text-center py-8 space-y-3">
+      <p className="text-sm text-slate-400">No hay partidos registrados.</p>
+      <p className="text-xs text-slate-400">¿Tenías datos cargados y no aparecen?</p>
+      <button
+        onClick={recover}
+        disabled={loading}
+        className="cursor-pointer text-sm text-brand underline disabled:opacity-50"
+      >
+        {loading ? 'Recuperando...' : 'Recuperar datos del Sheet'}
+      </button>
+    </div>
+  );
+}
+
 // ─── Página ───────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
   const [confirmDelete, setConfirmDelete] = useState<Partido | null>(null);
@@ -218,7 +251,7 @@ export default function HistorialPage() {
       {isLoading ? (
         <p className="text-sm text-slate-400 text-center py-8">Cargando...</p>
       ) : sorted.length === 0 ? (
-        <p className="text-sm text-slate-400 text-center py-8">No hay partidos registrados aún.</p>
+        <EmptyHistorial onRecover={() => qc.invalidateQueries({ queryKey: ['partidos'] })} />
       ) : (
         <div className="space-y-3">
           {sorted.map(p => (
