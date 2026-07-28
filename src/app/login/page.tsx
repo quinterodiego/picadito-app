@@ -5,7 +5,8 @@ import Image from 'next/image';
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-8 px-6 bg-slate-50">
+    // Fixed overlay so the login screen covers the app header + navbar
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-8 px-6 bg-slate-50">
       <div className="flex flex-col items-center gap-3">
         <Image src="/logo.png" alt="No Cazo Un Fulbo" width={80} height={80} className="rounded-2xl" />
         <h1 className="text-2xl font-black text-brand tracking-tight">No Cazo Un Fulbo</h1>
