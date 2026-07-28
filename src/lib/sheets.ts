@@ -1,6 +1,14 @@
 import { google } from 'googleapis';
 import type { Jugador, NivelJugador, Partido } from './types';
 
+export interface GrupoConfig {
+  id: string;
+  nombre: string;
+  imagen: string;
+  inviteCode: string;
+  adminId: string;
+}
+
 const SHEET_ID = process.env.GOOGLE_SHEET_ID!;
 
 function getAuth() {
@@ -18,17 +26,151 @@ async function getSheetsClient() {
   return google.sheets({ version: 'v4', auth });
 }
 
-// ─── Jugadores ────────────────────────────────────────────────────────────────
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
 
-export async function getJugadores(): Promise<Jugador[]> {
+export async function getOrCreateUsuario(email: string, nombre: string): Promise<string> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A2:H',
+    range: 'Usuarios!A2:D',
+  });
+  const rows = res.data.values ?? [];
+  const existing = rows.find(r => r[1] === email);
+  if (existing) return existing[0];
+
+  const id = Date.now().toString();
+  const createdAt = new Date().toISOString();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Usuarios!A:D',
+    valueInputOption: 'RAW',
+    requestBody: { values: [[id, email, nombre, createdAt]] },
+  });
+  return id;
+}
+
+export async function getMiembroGrupo(userId: string): Promise<{ groupId: string; role: string } | null> {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Miembros!A2:D',
+  });
+  const rows = res.data.values ?? [];
+  const row = rows.find(r => r[1] === userId);
+  if (!row) return null;
+  return { groupId: row[0], role: row[2] };
+}
+
+export async function addMiembro(groupId: string, userId: string, role: string): Promise<void> {
+  const sheets = await getSheetsClient();
+  const joinedAt = new Date().toISOString();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Miembros!A:D',
+    valueInputOption: 'RAW',
+    requestBody: { values: [[groupId, userId, role, joinedAt]] },
+  });
+}
+
+// ─── Grupos ───────────────────────────────────────────────────────────────────
+
+export async function createGrupo(data: { nombre: string; adminId: string }): Promise<{ id: string; inviteCode: string }> {
+  const sheets = await getSheetsClient();
+  const id = Date.now().toString();
+  const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const createdAt = new Date().toISOString();
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: 'Grupos!A:F',
+    valueInputOption: 'RAW',
+    requestBody: { values: [[id, data.nombre, '', inviteCode, data.adminId, createdAt]] },
+  });
+  return { id, inviteCode };
+}
+
+export async function getGrupo(groupId: string): Promise<GrupoConfig> {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Grupos!A2:E',
+  });
+  const rows = res.data.values ?? [];
+  const row = rows.find(r => r[0] === groupId);
+  if (!row) throw new Error('Grupo no encontrado');
+  return {
+    id: row[0],
+    nombre: row[1] ?? '',
+    imagen: row[2] ?? '',
+    inviteCode: row[3] ?? '',
+    adminId: row[4] ?? '',
+  };
+}
+
+export async function updateGrupo(groupId: string, data: { nombre?: string; imagen?: string }): Promise<void> {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Grupos!A:A',
+  });
+  const rows = res.data.values ?? [];
+  const rowIndex = rows.findIndex(r => r[0] === groupId);
+  if (rowIndex === -1) throw new Error('Grupo no encontrado');
+  const sheetRow = rowIndex + 1;
+
+  if (data.nombre !== undefined) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Grupos!B${sheetRow}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[data.nombre]] },
+    });
+  }
+  if (data.imagen !== undefined) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Grupos!C${sheetRow}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[data.imagen]] },
+    });
+  }
+}
+
+export async function unirseConCodigo(inviteCode: string, userId: string): Promise<{ groupId: string } | null> {
+  const sheets = await getSheetsClient();
+  const gruposRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Grupos!A2:F',
+  });
+  const gruposRows = gruposRes.data.values ?? [];
+  const grupoRow = gruposRows.find(r => r[3] === inviteCode);
+  if (!grupoRow) return null;
+
+  const groupId = grupoRow[0];
+
+  const miembrosRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Miembros!A2:D',
+  });
+  const miembrosRows = miembrosRes.data.values ?? [];
+  const alreadyMember = miembrosRows.some(r => r[0] === groupId && r[1] === userId);
+  if (alreadyMember) return { groupId };
+
+  await addMiembro(groupId, userId, 'member');
+  return { groupId };
+}
+
+// ─── Jugadores ────────────────────────────────────────────────────────────────
+// Schema: A=id, B=nombre, C=nivel, D=activo, E=apodo, F=lesionado, G=esArquero, H=puedeAtajarProximo, I=group_id
+
+export async function getJugadores(groupId: string): Promise<Jugador[]> {
+  const sheets = await getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Jugadores!A2:I',
   });
   const rows = res.data.values ?? [];
   return rows
-    .filter(row => row[0])
+    .filter(row => row[0] && row[8] === groupId)
     .map(row => ({
       id: row[0],
       nombre: row[1],
@@ -41,70 +183,77 @@ export async function getJugadores(): Promise<Jugador[]> {
     }));
 }
 
-export async function addJugador(data: Omit<Jugador, 'id'>): Promise<Jugador> {
+export async function addJugador(groupId: string, data: Omit<Jugador, 'id'>): Promise<Jugador> {
   const sheets = await getSheetsClient();
   const id = Date.now().toString();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A:H',
+    range: 'Jugadores!A:I',
     valueInputOption: 'RAW',
     requestBody: {
-      values: [[id, data.nombre, data.nivel, data.activo, data.apodo ?? '', data.lesionado, data.esArquero, data.puedeAtajarProximo]],
+      values: [[
+        id, data.nombre, data.nivel, data.activo,
+        data.apodo ?? '', data.lesionado, data.esArquero, data.puedeAtajarProximo,
+        groupId,
+      ]],
     },
   });
   return { id, ...data };
 }
 
-export async function updateJugador(jugador: Jugador): Promise<void> {
+export async function updateJugador(groupId: string, jugador: Jugador): Promise<void> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A:A',
+    range: 'Jugadores!A:I',
   });
   const rows = res.data.values ?? [];
-  const rowIndex = rows.findIndex(r => r[0] === jugador.id);
+  const rowIndex = rows.findIndex(r => r[0] === jugador.id && r[8] === groupId);
   if (rowIndex === -1) throw new Error('Jugador no encontrado');
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `Jugadores!A${sheetRow}:H${sheetRow}`,
+    range: `Jugadores!A${sheetRow}:I${sheetRow}`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
         jugador.id, jugador.nombre, jugador.nivel, jugador.activo,
         jugador.apodo ?? '', jugador.lesionado, jugador.esArquero, jugador.puedeAtajarProximo,
+        groupId,
       ]],
     },
   });
 }
 
-export async function deleteJugador(id: string): Promise<void> {
+export async function deleteJugador(groupId: string, id: string): Promise<void> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A:A',
+    range: 'Jugadores!A:I',
   });
   const rows = res.data.values ?? [];
-  const rowIndex = rows.findIndex(r => r[0] === id);
+  const rowIndex = rows.findIndex(r => r[0] === id && r[8] === groupId);
   if (rowIndex === -1) throw new Error('Jugador no encontrado');
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SHEET_ID,
-    range: `Jugadores!A${sheetRow}:H${sheetRow}`,
+    range: `Jugadores!A${sheetRow}:I${sheetRow}`,
   });
 }
 
 // ─── Partidos ─────────────────────────────────────────────────────────────────
+// Schema: A=id, B=fecha, C=equipo1, D=equipo2, E=resultado, F=notas, G=destacado,
+//         H=rustico, I=formacion1, J=formacion2, K=posiciones1, L=posiciones2, M=group_id
 
-export async function getPartidos(): Promise<Partido[]> {
+export async function getPartidos(groupId: string): Promise<Partido[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A2:L',
+    range: 'Partidos!A2:M',
   });
   const rows = res.data.values ?? [];
   return rows
-    .filter(row => row[0])
+    .filter(row => row[0] && row[12] === groupId)
     .map(row => ({
       id: row[0],
       fecha: row[1],
@@ -121,12 +270,12 @@ export async function getPartidos(): Promise<Partido[]> {
     }));
 }
 
-export async function addPartido(data: Omit<Partido, 'id'>): Promise<Partido> {
+export async function addPartido(groupId: string, data: Omit<Partido, 'id'>): Promise<Partido> {
   const sheets = await getSheetsClient();
   const id = Date.now().toString();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A:L',
+    range: 'Partidos!A:M',
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
@@ -142,25 +291,26 @@ export async function addPartido(data: Omit<Partido, 'id'>): Promise<Partido> {
         data.formacion2 ?? '',
         data.posiciones1 ? JSON.stringify(data.posiciones1) : '',
         data.posiciones2 ? JSON.stringify(data.posiciones2) : '',
+        groupId,
       ]],
     },
   });
   return { id, ...data };
 }
 
-export async function updatePartido(partido: Partido): Promise<void> {
+export async function updatePartido(groupId: string, partido: Partido): Promise<void> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A:A',
+    range: 'Partidos!A:M',
   });
   const rows = res.data.values ?? [];
-  const rowIndex = rows.findIndex(r => r[0] === partido.id);
+  const rowIndex = rows.findIndex(r => r[0] === partido.id && r[12] === groupId);
   if (rowIndex === -1) throw new Error('Partido no encontrado');
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `Partidos!A${sheetRow}:L${sheetRow}`,
+    range: `Partidos!A${sheetRow}:M${sheetRow}`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
@@ -176,60 +326,165 @@ export async function updatePartido(partido: Partido): Promise<void> {
         partido.formacion2 ?? '',
         partido.posiciones1 ? JSON.stringify(partido.posiciones1) : '',
         partido.posiciones2 ? JSON.stringify(partido.posiciones2) : '',
+        groupId,
       ]],
     },
   });
 }
 
-export async function deletePartido(id: string): Promise<void> {
+export async function deletePartido(groupId: string, id: string): Promise<void> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Partidos!A:A',
+    range: 'Partidos!A:M',
   });
   const rows = res.data.values ?? [];
-  const rowIndex = rows.findIndex(r => r[0] === id);
+  const rowIndex = rows.findIndex(r => r[0] === id && r[12] === groupId);
   if (rowIndex === -1) throw new Error('Partido no encontrado');
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SHEET_ID,
-    range: `Partidos!A${sheetRow}:H${sheetRow}`,
+    range: `Partidos!A${sheetRow}:M${sheetRow}`,
   });
 }
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
+// ─── Setup + Migration ────────────────────────────────────────────────────────
 
-export async function initSheets(): Promise<void> {
+export async function initSheets(): Promise<{ migrated: boolean; groupId?: string }> {
   const sheets = await getSheetsClient();
 
   const sheetMeta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
   const existingSheets = sheetMeta.data.sheets?.map(s => s.properties?.title) ?? [];
 
-  const toCreate = [
-    { title: 'Jugadores', headers: ['id', 'nombre', 'nivel', 'activo', 'apodo', 'lesionado', 'esArquero', 'puedeAtajarProximo'] },
-    { title: 'Partidos', headers: ['id', 'fecha', 'equipo1', 'equipo2', 'resultado', 'notas', 'destacado', 'rustico'] },
+  const newTabs = [
+    { title: 'Usuarios', headers: ['id', 'email', 'nombre', 'created_at'] },
+    { title: 'Grupos', headers: ['id', 'nombre', 'imagen', 'invite_code', 'admin_id', 'created_at'] },
+    { title: 'Miembros', headers: ['group_id', 'user_id', 'role', 'joined_at'] },
   ];
 
-  for (const sheet of toCreate) {
-    if (!existingSheets.includes(sheet.title)) {
+  for (const tab of newTabs) {
+    if (!existingSheets.includes(tab.title)) {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId: SHEET_ID,
         requestBody: {
-          requests: [{ addSheet: { properties: { title: sheet.title } } }],
+          requests: [{ addSheet: { properties: { title: tab.title } } }],
         },
       });
     }
     const headersRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEET_ID,
-      range: `${sheet.title}!A1:Z1`,
+      range: `${tab.title}!A1:Z1`,
     });
     if (!headersRes.data.values?.[0]?.length) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SHEET_ID,
-        range: `${sheet.title}!A1`,
+        range: `${tab.title}!A1`,
         valueInputOption: 'RAW',
-        requestBody: { values: [sheet.headers] },
+        requestBody: { values: [tab.headers] },
       });
     }
   }
+
+  // Ensure Jugadores has group_id header at col I, Partidos at col M
+  const headerChecks: { tab: string; col: string; header: string }[] = [
+    { tab: 'Jugadores', col: 'I1', header: 'group_id' },
+    { tab: 'Partidos',  col: 'M1', header: 'group_id' },
+  ];
+  for (const { tab, col, header } of headerChecks) {
+    if (existingSheets.includes(tab)) {
+      const hRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: `${tab}!${col}`,
+      });
+      if (!hRes.data.values?.[0]?.[0]) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID,
+          range: `${tab}!${col}`,
+          valueInputOption: 'RAW',
+          requestBody: { values: [[header]] },
+        });
+      }
+    }
+  }
+
+  // Check if migration is needed
+  const jugadoresRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Jugadores!A2:I',
+  });
+  const jugadoresRows = jugadoresRes.data.values ?? [];
+  const jugadoresNeedingMigration = jugadoresRows
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => row[0] && !row[8]);
+
+  const partidosRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: 'Partidos!A2:M',
+  });
+  const partidosRows = partidosRes.data.values ?? [];
+  const partidosNeedingMigration = partidosRows
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => row[0] && !row[12]);
+
+  const needsMigration = jugadoresNeedingMigration.length > 0 || partidosNeedingMigration.length > 0;
+
+  if (!needsMigration) {
+    return { migrated: false };
+  }
+
+  // Read old Config tab if it exists
+  let grupoNombre = 'Mi Grupo';
+  let grupoImagen: string | undefined;
+  let adminEmail = 'admin@setup.local';
+
+  if (existingSheets.includes('Config')) {
+    try {
+      const configRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: SHEET_ID,
+        range: 'Config!A:B',
+      });
+      const configRows = configRes.data.values ?? [];
+      const configMap = Object.fromEntries(
+        configRows.filter(r => r[0]).map(r => [r[0], r[1] ?? ''])
+      );
+      if (configMap['grupo_nombre']) grupoNombre = configMap['grupo_nombre'];
+      if (configMap['grupo_imagen']) grupoImagen = configMap['grupo_imagen'];
+      if (configMap['admin_email']) adminEmail = configMap['admin_email'];
+    } catch {
+      // Config tab may not be readable, use defaults
+    }
+  }
+
+  const adminId = await getOrCreateUsuario(adminEmail, 'Admin');
+  const { id: groupId } = await createGrupo({ nombre: grupoNombre, adminId });
+
+  if (grupoImagen) {
+    await updateGrupo(groupId, { imagen: grupoImagen });
+  }
+
+  await addMiembro(groupId, adminId, 'admin');
+
+  // Migrate Jugadores rows — write groupId to col I
+  for (const { idx } of jugadoresNeedingMigration) {
+    const sheetRow = idx + 2;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Jugadores!I${sheetRow}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[groupId]] },
+    });
+  }
+
+  // Migrate Partidos rows — write groupId to col M
+  for (const { idx } of partidosNeedingMigration) {
+    const sheetRow = idx + 2;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `Partidos!M${sheetRow}`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [[groupId]] },
+    });
+  }
+
+  return { migrated: true, groupId };
 }

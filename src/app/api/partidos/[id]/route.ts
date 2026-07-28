@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { updatePartido, deletePartido } from '@/lib/sheets';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  const groupId = session?.user?.groupId;
+  if (!groupId) return NextResponse.json({ error: 'Sin grupo' }, { status: 403 });
+
   try {
     const { id } = await params;
     const body = await req.json();
-    await updatePartido({
+    await updatePartido(groupId, {
       id,
       fecha: body.fecha,
       equipo1: body.equipo1,
@@ -27,9 +32,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  const groupId = session?.user?.groupId;
+  if (!groupId) return NextResponse.json({ error: 'Sin grupo' }, { status: 403 });
+
   try {
     const { id } = await params;
-    await deletePartido(id);
+    await deletePartido(groupId, id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(error);

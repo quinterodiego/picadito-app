@@ -4,6 +4,7 @@ import Image from 'next/image';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import QueryProvider from '@/components/QueryProvider';
+import AuthProvider from '@/components/AuthProvider';
 import { Toaster } from '@/components/ui/sonner';
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${outfit.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full bg-slate-50 text-slate-900">
+        <AuthProvider>
         <QueryProvider>
           <header className="w-full max-w-5xl mx-auto px-5 pt-4 pb-3">
             <div className="flex items-center gap-3">
@@ -39,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navbar />
           <Toaster richColors position="top-center" />
         </QueryProvider>
+        </AuthProvider>
       </body>
     </html>
   );

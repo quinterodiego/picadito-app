@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { getPartidos, addPartido, addJugador } from '@/lib/sheets';
-import type { ResultadoPartido } from '@/lib/types';
 
 export async function GET() {
+  const session = await auth();
+  const groupId = session?.user?.groupId;
+  if (!groupId) return NextResponse.json({ error: 'Sin grupo' }, { status: 403 });
+
   try {
-    const partidos = await getPartidos();
+    const partidos = await getPartidos(groupId);
     return NextResponse.json(partidos);
   } catch (error) {
     console.error(error);
@@ -13,6 +17,10 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const session = await auth();
+  const groupId = session?.user?.groupId;
+  if (!groupId) return NextResponse.json({ error: 'Sin grupo' }, { status: 403 });
+
   try {
     const body = await req.json();
 
@@ -20,7 +28,7 @@ export async function POST(req: Request) {
     const idMap = new Map<string, string>();
 
     for (const inv of invitados) {
-      const creado = await addJugador({
+      const creado = await addJugador(groupId, {
         nombre: inv.nombre,
         apodo: '',
         nivel: 'medio',
@@ -34,7 +42,7 @@ export async function POST(req: Request) {
 
     const remap = (ids: string[]) => ids.map(id => idMap.get(id) ?? id);
 
-    const partido = await addPartido({
+    const partido = await addPartido(groupId, {
       fecha: body.fecha,
       equipo1: remap(body.equipo1),
       equipo2: remap(body.equipo2),

@@ -1,22 +1,26 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 import { getJugadores, getPartidos } from '@/lib/sheets';
 import { generarEquipos } from '@/lib/team-algorithm';
 import type { Jugador } from '@/lib/types';
 
 export async function POST(req: Request) {
+  const session = await auth();
+  const groupId = session?.user?.groupId;
+  if (!groupId) return NextResponse.json({ error: 'Sin grupo' }, { status: 403 });
+
   try {
     const body = await req.json();
     const asistentesIds: string[] = body.asistentes ?? [];
     const invitadosNombres: string[] = body.invitados ?? [];
 
     const [todosJugadores, historial] = await Promise.all([
-      getJugadores(),
-      getPartidos(),
+      getJugadores(groupId),
+      getPartidos(groupId),
     ]);
 
     const jugadoresRegulares = todosJugadores.filter(j => asistentesIds.includes(j.id));
 
-    // Invitados: jugadores temporales con ID "invitado_N" y nivel medio
     const invitados: Jugador[] = invitadosNombres.map((nombre, i) => ({
       id: `invitado_${i}`,
       nombre,
@@ -31,10 +35,7 @@ export async function POST(req: Request) {
     const asistentes = [...jugadoresRegulares, ...invitados];
 
     if (asistentes.length < 2) {
-      return NextResponse.json(
-        { error: 'Se necesitan al menos 2 jugadores' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Se necesitan al menos 2 jugadores' }, { status: 400 });
     }
 
     const sugerencias = generarEquipos(asistentes, historial);

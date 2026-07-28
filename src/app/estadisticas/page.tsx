@@ -60,7 +60,7 @@ function calcStats(jugadores: Jugador[], partidos: Partido[]) {
     if (p.rustico)   { const s = stats.get(p.rustico);   if (s) s.rusticos++; }
   }
 
-  return Array.from(stats.values()).filter(s => s.jugados > 0).sort((a, b) => b.victorias - a.victorias || b.jugados - a.jugados);
+  return Array.from(stats.values()).filter(s => s.jugados > 0 && s.jugador.activo).sort((a, b) => b.victorias - a.victorias || b.jugados - a.jugados);
 }
 
 function pct(v: number, total: number) { return total === 0 ? 0 : Math.round((v / total) * 100); }
@@ -102,7 +102,20 @@ export default function EstadisticasPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Estadísticas</h1>
-      <p className="text-xs text-slate-400">{partidos.filter(p => p.resultado).length} partidos jugados</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+          <p className="text-2xl font-black text-brand">{partidos.filter(p => p.resultado).length}</p>
+          <p className="text-xs text-slate-400 mt-0.5">Partidos</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+          <p className="text-2xl font-black text-slate-700">{stats.length}</p>
+          <p className="text-xs text-slate-400 mt-0.5">Jugadores</p>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
+          <p className="text-2xl font-black text-slate-700">{allAsistencia[0]?.jugados ?? 0}</p>
+          <p className="text-xs text-slate-400 mt-0.5">Máx. partidos</p>
+        </div>
+      </div>
 
       <Tabs defaultValue="jugadores">
         <TabsList className="w-full">
