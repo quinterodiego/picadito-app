@@ -154,18 +154,38 @@ export default function EstadisticasPage() {
         <TabsContent value="ranking" className="space-y-3 mt-3">
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Trophy size={14} className="text-yellow-500" /> Tabla de puntos</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {allPuntos.length === 0 ? <p className="text-xs text-slate-400">Sin partidos con resultado.</p> : <>
-                {slice('puntos', allPuntos).map((s, i) => (
-                  <div key={s.jugador.id} className="flex items-center gap-2 text-sm">
-                    <span className="w-5 text-slate-400 text-xs">{i + 1}.</span>
-                    <span className="flex-1">{s.jugador.apodo || s.jugador.nombre}</span>
-                    <span className="text-xs text-slate-400">{s.victorias}G {s.empates}E {s.derrotas}P</span>
-                    <span className="font-bold text-brand w-10 text-right">{pts(s)} pts</span>
-                  </div>
-                ))}
+            <CardContent className="p-0">
+              {allPuntos.length === 0 ? <p className="text-xs text-slate-400 px-4 py-4">Sin partidos con resultado.</p> : <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase">
+                        <th className="text-left px-4 py-2 font-medium w-6">#</th>
+                        <th className="text-left px-2 py-2 font-medium">Jugador</th>
+                        <th className="text-center px-2 py-2 font-medium">PJ</th>
+                        <th className="text-center px-2 py-2 font-medium">G</th>
+                        <th className="text-center px-2 py-2 font-medium">E</th>
+                        <th className="text-center px-2 py-2 font-medium">P</th>
+                        <th className="text-center px-3 py-2 font-medium text-brand">Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {slice('puntos', allPuntos).map((s, i) => (
+                        <tr key={s.jugador.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                          <td className="px-4 py-2 text-slate-400 text-xs">{i + 1}</td>
+                          <td className="px-2 py-2 font-medium">{s.jugador.apodo || s.jugador.nombre}</td>
+                          <td className="px-2 py-2 text-center text-slate-500">{s.jugados}</td>
+                          <td className="px-2 py-2 text-center text-slate-500">{s.victorias}</td>
+                          <td className="px-2 py-2 text-center text-slate-500">{s.empates}</td>
+                          <td className="px-2 py-2 text-center text-slate-500">{s.derrotas}</td>
+                          <td className="px-3 py-2 text-center font-bold text-brand">{pts(s)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 {allPuntos.length > 5 && (
-                  <button onClick={() => toggle('puntos')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 pt-1">
+                  <button onClick={() => toggle('puntos')} className="cursor-pointer text-xs text-slate-400 hover:text-slate-600 px-4 py-2">
                     {expandido.puntos ? 'Ver menos ↑' : `Ver todos (${allPuntos.length}) ↓`}
                   </button>
                 )}
