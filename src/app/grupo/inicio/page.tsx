@@ -84,7 +84,13 @@ export default function GrupoInicioPage() {
 
       <p className="text-xs text-slate-400">
         Conectado como <span className="font-medium">{session?.user?.email}</span>.{' '}
-        <button onClick={() => signOut({ callbackUrl: '/login' })} className="cursor-pointer underline hover:text-slate-600">
+        <button
+          onClick={async () => {
+            await signOut({ redirect: false });
+            window.location.replace('/login');
+          }}
+          className="cursor-pointer underline hover:text-slate-600"
+        >
           Salir
         </button>
       </p>
