@@ -35,17 +35,28 @@ const HISTORIAL = [
 const FECHAS_SEED = new Set(HISTORIAL.map(p => p.fecha));
 
 async function main() {
-  const { getJugadores, getPartidos, addPartido, deletePartido } = await import('../src/lib/sheets');
+  const { getJugadores, getPartidos, addPartido, deletePartido, getMiembroGrupo, getOrCreateUsuario } = await import('../src/lib/sheets');
+
+  // Resolve groupId from admin email in env
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@setup.local';
+  const adminId = await getOrCreateUsuario(adminEmail, 'Admin');
+  const miembro = await getMiembroGrupo(adminId);
+  if (!miembro) {
+    console.error('No se encontró un grupo para el admin. Corrí POST /api/setup primero.');
+    process.exit(1);
+  }
+  const { groupId } = miembro;
+  console.log(`Usando grupo: ${groupId}\n`);
 
   // Borrar partidos previos de estas fechas (evita duplicados al re-correr)
-  const existentes = await getPartidos();
+  const existentes = await getPartidos(groupId);
   const aEliminar = existentes.filter(p => FECHAS_SEED.has(p.fecha));
   if (aEliminar.length > 0) {
     console.log(`Eliminando ${aEliminar.length} partidos previos de las mismas fechas...`);
-    for (const p of aEliminar) await deletePartido(p.id);
+    for (const p of aEliminar) await deletePartido(groupId, p.id);
   }
 
-  const jugadores = await getJugadores();
+  const jugadores = await getJugadores(groupId);
   console.log(`${jugadores.length} jugadores en la app\n`);
 
   function findId(name: string): string | null {
@@ -66,7 +77,7 @@ async function main() {
   for (const p of HISTORIAL) {
     const e1 = p.equipo1.map(findId).filter((id): id is string => id !== null);
     const e2 = p.equipo2.map(findId).filter((id): id is string => id !== null);
-    await addPartido({ fecha: p.fecha, equipo1: e1, equipo2: e2 });
+    await addPartido(groupId, { fecha: p.fecha, equipo1: e1, equipo2: e2 });
     console.log(`✓ ${p.fecha}  [${p.equipo1.join(', ')}] vs [${p.equipo2.join(', ')}]`);
   }
 
