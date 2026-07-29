@@ -12,12 +12,12 @@ export default auth((req) => {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-    if (pathname !== '/login') {
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
-    return NextResponse.next();
+    // / and /login are public — everything else redirects to landing
+    if (pathname === '/' || pathname === '/login') return NextResponse.next();
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
+  // Logged-in users don't need the login page or the landing — send to app
   if (pathname === '/login') {
     return NextResponse.redirect(new URL('/', req.url));
   }
