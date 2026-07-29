@@ -1,24 +1,32 @@
 import { NextResponse } from 'next/server';
 
-// Clears all next-auth session cookies and redirects to /login.
-// Used as a fallback when client-side signOut() fails to clear the session.
 export async function GET(req: Request) {
   const response = NextResponse.redirect(new URL('/login', req.url));
-  const cookieNames = [
-    'authjs.session-token',
-    'authjs.callback-url',
-    'authjs.csrf-token',
-    '__Secure-authjs.session-token',
-    '__Secure-authjs.callback-url',
-    '__Secure-authjs.csrf-token',
-    '__Host-authjs.csrf-token',
-    'next-auth.session-token',
-    'next-auth.callback-url',
-    'next-auth.csrf-token',
-    '__Secure-next-auth.session-token',
+
+  const base = 'Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax';
+  const secure = `${base}; Secure`;
+
+  const cookieHeaders = [
+    // Standard (HTTP / localhost)
+    `authjs.session-token=; ${base}`,
+    `authjs.callback-url=; ${base}`,
+    `authjs.csrf-token=; ${base}`,
+    // __Secure- prefixed (HTTPS / production) — must include Secure attribute
+    `__Secure-authjs.session-token=; ${secure}`,
+    `__Secure-authjs.callback-url=; ${secure}`,
+    `__Secure-authjs.csrf-token=; ${secure}`,
+    // __Host- prefixed — must include Secure + no Domain
+    `__Host-authjs.csrf-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax; Secure`,
+    // Legacy next-auth names
+    `next-auth.session-token=; ${base}`,
+    `next-auth.callback-url=; ${base}`,
+    `next-auth.csrf-token=; ${base}`,
+    `__Secure-next-auth.session-token=; ${secure}`,
   ];
-  for (const name of cookieNames) {
-    response.cookies.set(name, '', { expires: new Date(0), path: '/' });
+
+  for (const header of cookieHeaders) {
+    response.headers.append('Set-Cookie', header);
   }
+
   return response;
 }
