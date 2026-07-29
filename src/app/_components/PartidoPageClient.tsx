@@ -193,6 +193,7 @@ export default function PartidoPageClient() {
 
   const jugadoresActivos = jugadores.filter(j => j.activo && !j.lesionado);
   const jugadoresLesionados = jugadores.filter(j => j.activo && j.lesionado);
+  const jugadoresAnteriores = jugadores.filter(j => !j.activo);
   const totalJugadores = asistentes.length + invitados.length;
 
   function agregarInvitado() {
@@ -364,10 +365,37 @@ export default function PartidoPageClient() {
                 </div>
               )}
 
-              {/* Invitados */}
+              {/* Jugadores anteriores (inactivos) */}
+              {jugadoresAnteriores.length > 0 && (
+                <div className="pt-1 border-t border-slate-100 space-y-2">
+                  <p className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                    <UserPlus size={12} /> Jugaron antes
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {jugadoresAnteriores.map(j => {
+                      const sel = asistentes.includes(j.id);
+                      return (
+                        <button
+                          key={j.id}
+                          onClick={() => toggleAsistente(j.id)}
+                          className={`cursor-pointer flex items-center gap-1 px-2.5 py-1 rounded-full text-sm font-medium border transition-all ${
+                            sel
+                              ? 'bg-purple-600 text-white border-purple-600'
+                              : 'bg-white text-purple-700 border-purple-200 hover:border-purple-400'
+                          }`}
+                        >
+                          {j.apodo || j.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Invitados nuevos */}
               <div className="pt-1 border-t border-slate-100 space-y-2">
                 <p className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                  <UserPlus size={12} /> Invitados
+                  <UserPlus size={12} /> Invitado nuevo
                 </p>
                 {invitados.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
