@@ -5,6 +5,7 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 import QueryProvider from '@/components/QueryProvider';
 import AuthProvider from '@/components/AuthProvider';
+import UserMenu from '@/components/UserMenu';
 import { Toaster } from '@/components/ui/sonner';
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
@@ -31,10 +32,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="w-full max-w-5xl mx-auto px-5 pt-4 pb-3">
             <div className="flex items-center gap-3">
               <Image src="/logo.png" alt="No Cazo Un Fulbo" width={64} height={64} className="rounded-lg" />
-              <div>
+              <div className="flex-1">
                 <p className="text-base font-black text-brand tracking-tight leading-tight">No Cazo Un Fulbo</p>
                 <p className="text-xs text-slate-400 leading-tight hidden sm:block">La app para organizar el fulbo con amigos.</p>
               </div>
+              <UserMenu />
             </div>
           </header>
           <main className="w-full max-w-5xl mx-auto navbar-safe-padding px-5 pb-5">{children}</main>
