@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, UserCheck, UserX, Bone, Shield, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -17,25 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import type { Jugador, NivelJugador } from '@/lib/types';
-
-const NIVELES: NivelJugador[] = ['bajo', 'semi-medio', 'medio', 'semi-alto', 'alto'];
-
-const NIVEL_CONFIG: Record<NivelJugador, { label: string; color: string }> = {
-  'bajo':      { label: 'Bajo',      color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  'semi-medio':{ label: 'Semi Medio',color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
-  'medio':     { label: 'Medio',     color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-  'semi-alto': { label: 'Semi Alto', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  'alto':      { label: 'Alto',      color: 'bg-red-100 text-red-700 border-red-200' },
-};
-
-function nivelColor(nivel: NivelJugador) {
-  return NIVEL_CONFIG[nivel].color;
-}
-
-function nivelLabel(nivel: NivelJugador) {
-  return NIVEL_CONFIG[nivel].label;
-}
+import type { Jugador } from '@/lib/types';
 
 function JugadorForm({
   initial,
@@ -44,13 +25,12 @@ function JugadorForm({
   loading,
 }: {
   initial?: Partial<Jugador>;
-  onSave: (data: { nombre: string; apodo: string; nivel: NivelJugador; activo: boolean; lesionado: boolean; esArquero: boolean; puedeAtajarProximo: boolean }) => void;
+  onSave: (data: Omit<Jugador, 'id'>) => void;
   onClose: () => void;
   loading: boolean;
 }) {
   const [nombre, setNombre] = useState(initial?.nombre ?? '');
   const [apodo, setApodo] = useState(initial?.apodo ?? '');
-  const [nivel, setNivel] = useState<NivelJugador>(initial?.nivel ?? 'medio');
   const [activo, setActivo] = useState(initial?.activo ?? true);
   const [lesionado, setLesionado] = useState(initial?.lesionado ?? false);
   const [esArquero, setEsArquero] = useState(initial?.esArquero ?? false);
@@ -77,26 +57,6 @@ function JugadorForm({
             placeholder="ej: El Toro"
             className="mt-1"
           />
-        </div>
-      </div>
-      <div>
-        <Label>Nivel</Label>
-        <div className="grid grid-cols-2 gap-2 mt-1">
-          {NIVELES.map((n, i) => (
-            <button
-              key={n}
-              onClick={() => setNivel(n)}
-              className={`cursor-pointer py-2 rounded-lg text-sm font-bold border transition-all ${
-                NIVELES.length % 2 !== 0 && i === NIVELES.length - 1 ? 'col-span-2' : ''
-              } ${
-                nivel === n
-                  ? nivelColor(n) + ' ring-2 ring-offset-1 ring-current'
-                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
-              }`}
-            >
-              {nivelLabel(n)}
-            </button>
-          ))}
         </div>
       </div>
       <div className="flex flex-col gap-2.5">
@@ -126,7 +86,7 @@ function JugadorForm({
       <DialogFooter className="gap-2">
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
         <Button
-          onClick={() => onSave({ nombre: nombre.trim(), apodo: apodo.trim(), nivel, activo, lesionado, esArquero, puedeAtajarProximo })}
+          onClick={() => onSave({ nombre: nombre.trim(), apodo: apodo.trim(), activo, lesionado, esArquero, puedeAtajarProximo })}
           disabled={!nombre.trim() || loading}
         >
           {loading ? 'Guardando...' : 'Guardar'}
@@ -148,8 +108,7 @@ export default function JugadoresPage() {
   });
 
   const addMutation = useMutation({
-    mutationFn: (data: { nombre: string; apodo: string; nivel: NivelJugador; activo: boolean; lesionado: boolean; esArquero: boolean; puedeAtajarProximo: boolean }) =>
-      axios.post('/api/jugadores', data),
+    mutationFn: (data: Omit<Jugador, 'id'>) => axios.post('/api/jugadores', data),
     onSuccess: () => {
       toast.success('Jugador agregado');
       qc.invalidateQueries({ queryKey: ['jugadores'] });
@@ -159,8 +118,7 @@ export default function JugadoresPage() {
   });
 
   const editMutation = useMutation({
-    mutationFn: (data: { nombre: string; apodo: string; nivel: NivelJugador; activo: boolean; lesionado: boolean; esArquero: boolean; puedeAtajarProximo: boolean }) =>
-      axios.put(`/api/jugadores/${editando!.id}`, data),
+    mutationFn: (data: Omit<Jugador, 'id'>) => axios.put(`/api/jugadores/${editando!.id}`, data),
     onSuccess: () => {
       toast.success('Jugador actualizado');
       qc.invalidateQueries({ queryKey: ['jugadores'] });
@@ -170,15 +128,13 @@ export default function JugadoresPage() {
   });
 
   const toggleActivoMutation = useMutation({
-    mutationFn: (j: Jugador) =>
-      axios.put(`/api/jugadores/${j.id}`, { ...j, activo: !j.activo }),
+    mutationFn: (j: Jugador) => axios.put(`/api/jugadores/${j.id}`, { ...j, activo: !j.activo }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['jugadores'] }),
     onError: () => toast.error('Error al actualizar jugador'),
   });
 
   const toggleLesionadoMutation = useMutation({
-    mutationFn: (j: Jugador) =>
-      axios.put(`/api/jugadores/${j.id}`, { ...j, lesionado: !j.lesionado }),
+    mutationFn: (j: Jugador) => axios.put(`/api/jugadores/${j.id}`, { ...j, lesionado: !j.lesionado }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['jugadores'] }),
     onError: () => toast.error('Error al actualizar jugador'),
   });
@@ -223,11 +179,6 @@ export default function JugadoresPage() {
                       {j.puedeAtajarProximo && <ShieldAlert size={13} className="text-blue-500 shrink-0" />}
                       {j.lesionado && <Bone size={13} className="text-orange-500 shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${nivelColor(j.nivel)}`}>
-                        {nivelLabel(j.nivel)}
-                      </span>
-                    </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button
@@ -270,9 +221,6 @@ export default function JugadoresPage() {
                   <CardContent className="py-3 px-4 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate text-slate-500">{j.nombre}</p>
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${nivelColor(j.nivel)}`}>
-                        {j.nivel}
-                      </span>
                     </div>
                     <button
                       onClick={() => toggleActivoMutation.mutate(j)}
@@ -295,12 +243,9 @@ export default function JugadoresPage() {
         </>
       )}
 
-      {/* Dialog agregar */}
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nuevo jugador</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Nuevo jugador</DialogTitle></DialogHeader>
           <JugadorForm
             onSave={data => addMutation.mutate(data)}
             onClose={() => setOpenForm(false)}
@@ -309,12 +254,9 @@ export default function JugadoresPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog editar */}
       <Dialog open={!!editando} onOpenChange={v => !v && setEditando(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar jugador</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Editar jugador</DialogTitle></DialogHeader>
           {editando && (
             <JugadorForm
               initial={editando}
@@ -326,12 +268,9 @@ export default function JugadoresPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog confirmar borrar */}
       <Dialog open={!!confirmDelete} onOpenChange={v => !v && setConfirmDelete(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar jugador</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Eliminar jugador</DialogTitle></DialogHeader>
           <p className="text-sm text-slate-600">
             ¿Seguro que querés eliminar a <strong>{confirmDelete?.nombre}</strong>? Esta acción no se puede deshacer.
           </p>

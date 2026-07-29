@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import type { Jugador, NivelJugador, Partido } from './types';
+import type { Jugador, Partido } from './types';
 
 export interface GrupoConfig {
   id: string;
@@ -174,7 +174,7 @@ export async function getJugadores(groupId: string): Promise<Jugador[]> {
     .map(row => ({
       id: row[0],
       nombre: row[1],
-      nivel: (row[2] ?? 'medio') as NivelJugador,
+      // col C (row[2]) was nivel — kept in sheet for legacy but not used
       activo: row[3] === 'TRUE',
       apodo: row[4] ?? '',
       lesionado: row[5] === 'TRUE',
@@ -192,7 +192,7 @@ export async function addJugador(groupId: string, data: Omit<Jugador, 'id'>): Pr
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
-        id, data.nombre, data.nivel, data.activo,
+        id, data.nombre, '', data.activo,
         data.apodo ?? '', data.lesionado, data.esArquero, data.puedeAtajarProximo,
         groupId,
       ]],
@@ -217,7 +217,7 @@ export async function updateJugador(groupId: string, jugador: Jugador): Promise<
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
-        jugador.id, jugador.nombre, jugador.nivel, jugador.activo,
+        jugador.id, jugador.nombre, '', jugador.activo,
         jugador.apodo ?? '', jugador.lesionado, jugador.esArquero, jugador.puedeAtajarProximo,
         groupId,
       ]],

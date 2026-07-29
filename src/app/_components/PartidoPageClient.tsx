@@ -15,29 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import CanchaVista, { type CanchaState } from '@/components/CanchaVista';
-import type { Jugador, NivelJugador, EquipoSugerido, ResultadoPartido } from '@/lib/types';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const NIVEL_CONFIG: Record<NivelJugador, { label: string; color: string }> = {
-  'bajo':       { label: 'B',  color: 'bg-blue-100 text-blue-700' },
-  'semi-medio': { label: 'SM', color: 'bg-cyan-100 text-cyan-700' },
-  'medio':      { label: 'M',  color: 'bg-yellow-100 text-yellow-700' },
-  'semi-alto':  { label: 'SA', color: 'bg-orange-100 text-orange-700' },
-  'alto':       { label: 'A',  color: 'bg-red-100 text-red-700' },
-};
-const NIVEL_PESO: Record<NivelJugador, number> = {
-  'bajo': 1, 'semi-medio': 2, 'medio': 3, 'semi-alto': 4, 'alto': 5,
-};
-
-function NivelBadge({ nivel }: { nivel: NivelJugador }) {
-  const { label, color } = NIVEL_CONFIG[nivel];
-  return <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${color}`}>{label}</span>;
-}
-
-function nivelEquipo(jugadores: Jugador[]) {
-  return jugadores.reduce((s, j) => s + NIVEL_PESO[j.nivel], 0);
-}
+import type { Jugador, EquipoSugerido, ResultadoPartido } from '@/lib/types';
 
 
 // ─── Columna editable de un equipo ────────────────────────────────────────────
@@ -53,7 +31,6 @@ function ColumnaEquipo({
   ganador?: boolean;
   gkId: string | null;
 }) {
-  const nivel = nivelEquipo(jugadores);
   const borderColor =
     ganador === true  ? 'border-brand/40 bg-brand-light' :
     ganador === false ? 'border-red-200 bg-red-50' :
@@ -65,7 +42,7 @@ function ColumnaEquipo({
     <div className={`rounded-xl border p-3 transition-colors ${borderColor}`}>
       <div className="flex items-center justify-between mb-2">
         <span className="font-semibold text-sm">{titulo}</span>
-        <span className="text-xs text-slate-500">Niv {nivel}</span>
+        <span className="text-xs text-slate-400">{jugadores.length} jug.</span>
       </div>
       <div className="flex flex-col gap-1.5">
         {jugadores.map(j => {
@@ -196,7 +173,7 @@ export default function PartidoPageClient() {
   const [asistentes, setAsistentes] = useState<string[]>([]);
   const [invitados, setInvitados] = useState<string[]>([]);
   const [inputInvitado, setInputInvitado] = useState('');
-  const [equipoEditado, setEquipoEditado] = useState<{ equipo1: Jugador[]; equipo2: Jugador[] } | null>(null);
+  const [equipoEditado, setEquipoEditado] = useState<{ equipo1: Jugador[]; equipo2: Jugador[]; modoAleatorio: boolean } | null>(null);
   const [mostrarCancha, setMostrarCancha] = useState(false);
   const [mostrarResultado, setMostrarResultado] = useState(false);
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
@@ -245,7 +222,7 @@ export default function PartidoPageClient() {
       axios.post<EquipoSugerido[]>('/api/equipos', { asistentes, invitados }).then(r => r.data),
     onSuccess: data => {
       const mejor = data[0];
-      setEquipoEditado({ equipo1: gkPrimero([...mejor.equipo1]), equipo2: gkPrimero([...mejor.equipo2]) });
+      setEquipoEditado({ equipo1: gkPrimero([...mejor.equipo1]), equipo2: gkPrimero([...mejor.equipo2]), modoAleatorio: mejor.modoAleatorio });
       setPartidoGuardadoId(null);
       setMostrarResultado(false);
     },
@@ -370,7 +347,6 @@ export default function PartidoPageClient() {
                       {j.apodo || j.nombre}
                       {j.esArquero && <Shield size={12} className={sel ? 'text-violet-200' : 'text-violet-500'} />}
                       {j.puedeAtajarProximo && !j.esArquero && <ShieldAlert size={12} className={sel ? 'text-blue-200' : 'text-blue-400'} />}
-                      {/* <NivelBadge nivel={j.nivel} /> */}
                     </button>
                   );
                 })}
@@ -447,6 +423,11 @@ export default function PartidoPageClient() {
       {equipoEditado && !partidoGuardadoId && (
         <Card>
           <CardHeader className="pb-2">
+            {equipoEditado.modoAleatorio && (
+              <p className="text-xs text-slate-400 bg-slate-50 rounded-lg px-3 py-2 mb-2">
+                Equipos aleatorios — el balanceo por historial se activa a partir del 5° partido con resultado.
+              </p>
+            )}
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <ArrowLeftRight size={15} className="text-slate-400" />
@@ -468,7 +449,7 @@ export default function PartidoPageClient() {
               <EditorEquipos
                 equipo1={equipoEditado.equipo1}
                 equipo2={equipoEditado.equipo2}
-                onChange={(e1, e2) => setEquipoEditado({ equipo1: e1, equipo2: e2 })}
+                onChange={(e1, e2) => setEquipoEditado(prev => prev ? { ...prev, equipo1: e1, equipo2: e2 } : null)}
                 goles1=""
                 goles2=""
               />
@@ -519,7 +500,7 @@ export default function PartidoPageClient() {
               <EditorEquipos
                 equipo1={equipoEditado.equipo1}
                 equipo2={equipoEditado.equipo2}
-                onChange={(e1, e2) => setEquipoEditado({ equipo1: e1, equipo2: e2 })}
+                onChange={(e1, e2) => setEquipoEditado(prev => prev ? { ...prev, equipo1: e1, equipo2: e2 } : null)}
                 goles1=""
                 goles2=""
               />

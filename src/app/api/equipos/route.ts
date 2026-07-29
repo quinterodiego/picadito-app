@@ -25,7 +25,6 @@ export async function POST(req: Request) {
       id: `invitado_${i}`,
       nombre,
       apodo: '',
-      nivel: 'medio',
       activo: false,
       lesionado: false,
       esArquero: false,

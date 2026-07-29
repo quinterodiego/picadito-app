@@ -14,7 +14,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       id,
       nombre: body.nombre,
       apodo: body.apodo ?? '',
-      nivel: body.nivel,
       activo: body.activo,
       lesionado: body.lesionado ?? false,
       esArquero: body.esArquero ?? false,

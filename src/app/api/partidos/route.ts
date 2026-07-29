@@ -31,7 +31,6 @@ export async function POST(req: Request) {
       const creado = await addJugador(groupId, {
         nombre: inv.nombre,
         apodo: '',
-        nivel: 'medio',
         activo: false,
         lesionado: false,
         esArquero: false,

@@ -26,7 +26,6 @@ export async function POST(req: Request) {
     const jugador = await addJugador(groupId, {
       nombre: body.nombre,
       apodo: body.apodo ?? '',
-      nivel: body.nivel,
       activo: body.activo ?? true,
       lesionado: body.lesionado ?? false,
       esArquero: body.esArquero ?? false,
