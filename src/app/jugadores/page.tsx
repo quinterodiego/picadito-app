@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, UserCheck, UserX, Bone, Shield, ShieldAlert } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserCheck, UserX, Bone, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import type { Jugador } from '@/lib/types';
+import type { Jugador, PuestoJugador } from '@/lib/types';
+
+const PUESTOS: { value: PuestoJugador; label: string; color: string }[] = [
+  { value: 'arquero',   label: 'Arquero',   color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { value: 'defensor',  label: 'Defensor',  color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { value: 'medio',     label: 'Medio',     color: 'bg-brand-light text-brand border-brand/20' },
+  { value: 'delantero', label: 'Delantero', color: 'bg-red-100 text-red-700 border-red-200' },
+];
 
 function JugadorForm({
   initial,
@@ -31,9 +38,9 @@ function JugadorForm({
 }) {
   const [nombre, setNombre] = useState(initial?.nombre ?? '');
   const [apodo, setApodo] = useState(initial?.apodo ?? '');
+  const [puesto, setPuesto] = useState<PuestoJugador | undefined>(initial?.puesto);
   const [activo, setActivo] = useState(initial?.activo ?? true);
   const [lesionado, setLesionado] = useState(initial?.lesionado ?? false);
-  const [esArquero, setEsArquero] = useState(initial?.esArquero ?? false);
   const [puedeAtajarProximo, setPuedeAtajarProximo] = useState(initial?.puedeAtajarProximo ?? false);
 
   return (
@@ -59,16 +66,29 @@ function JugadorForm({
           />
         </div>
       </div>
+      <div>
+        <Label className="mb-2 block">Puesto <span className="text-slate-400 font-normal">(opcional)</span></Label>
+        <div className="flex flex-wrap gap-2">
+          {PUESTOS.map(p => (
+            <button
+              key={p.value}
+              type="button"
+              onClick={() => setPuesto(puesto === p.value ? undefined : p.value)}
+              className={`px-3 py-1 rounded-full text-sm border font-medium transition-all ${
+                puesto === p.value
+                  ? p.color + ' ring-2 ring-offset-1 ring-current'
+                  : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center gap-2">
           <input type="checkbox" id="activo" checked={activo} onChange={e => setActivo(e.target.checked)} className="w-4 h-4" />
           <Label htmlFor="activo" className="cursor-pointer">Activo</Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="esArquero" checked={esArquero} onChange={e => setEsArquero(e.target.checked)} className="w-4 h-4 accent-violet-600" />
-          <Label htmlFor="esArquero" className="cursor-pointer flex items-center gap-1.5">
-            <Shield size={14} className="text-violet-600" /> Es arquero
-          </Label>
         </div>
         <div className="flex items-center gap-2">
           <input type="checkbox" id="puedeAtajar" checked={puedeAtajarProximo} onChange={e => setPuedeAtajarProximo(e.target.checked)} className="w-4 h-4 accent-blue-500" />
@@ -86,7 +106,7 @@ function JugadorForm({
       <DialogFooter className="gap-2">
         <Button variant="outline" onClick={onClose}>Cancelar</Button>
         <Button
-          onClick={() => onSave({ nombre: nombre.trim(), apodo: apodo.trim(), activo, lesionado, esArquero, puedeAtajarProximo })}
+          onClick={() => onSave({ nombre: nombre.trim(), apodo: apodo.trim() || undefined, puesto, activo, lesionado, puedeAtajarProximo })}
           disabled={!nombre.trim() || loading}
         >
           {loading ? 'Guardando...' : 'Guardar'}
@@ -175,7 +195,12 @@ export default function JugadoresPage() {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="font-medium truncate">{j.apodo || j.nombre}</p>
                       {j.apodo && <p className="text-xs text-slate-400 truncate">({j.nombre})</p>}
-                      {j.esArquero && <Shield size={13} className="text-violet-500 shrink-0" />}
+                      {j.puesto && (() => {
+                        const p = PUESTOS.find(p => p.value === j.puesto);
+                        return p ? (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${p.color}`}>{p.label}</span>
+                        ) : null;
+                      })()}
                       {j.puedeAtajarProximo && <ShieldAlert size={13} className="text-blue-500 shrink-0" />}
                       {j.lesionado && <Bone size={13} className="text-orange-500 shrink-0" />}
                     </div>

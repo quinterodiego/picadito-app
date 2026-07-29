@@ -27,7 +27,6 @@ export async function POST(req: Request) {
       apodo: '',
       activo: false,
       lesionado: false,
-      esArquero: false,
       puedeAtajarProximo: false,
     }));
 

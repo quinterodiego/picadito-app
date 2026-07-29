@@ -74,10 +74,10 @@ function ColumnaEquipo({
               {esGK && !estaSeleccionado && (
                 <span className="text-xs font-bold px-1 py-0.5 rounded bg-amber-200 text-amber-800 leading-none shrink-0">GK</span>
               )}
-              {!esGK && j.esArquero && (
+              {!esGK && j.puesto === 'arquero' && (
                 <Shield size={11} className={estaSeleccionado ? 'text-violet-200' : 'text-violet-500'} />
               )}
-              {!esGK && j.puedeAtajarProximo && !j.esArquero && (
+              {!esGK && j.puedeAtajarProximo && j.puesto !== 'arquero' && (
                 <ShieldAlert size={11} className={estaSeleccionado ? 'text-blue-200' : 'text-blue-400'} />
               )}
             </button>
@@ -213,7 +213,7 @@ export default function PartidoPageClient() {
 
   // Pone el arquero (por flag) primero en el array — así gkId = equipo[0].id
   function gkPrimero(equipo: Jugador[]): Jugador[] {
-    const gk = equipo.find(j => j.esArquero) ?? equipo.find(j => j.puedeAtajarProximo);
+    const gk = equipo.find(j => j.puesto === 'arquero') ?? equipo.find(j => j.puedeAtajarProximo);
     if (!gk) return equipo;
     return [gk, ...equipo.filter(j => j.id !== gk.id)];
   }
@@ -346,8 +346,8 @@ export default function PartidoPageClient() {
                       }`}
                     >
                       {j.apodo || j.nombre}
-                      {j.esArquero && <Shield size={12} className={sel ? 'text-violet-200' : 'text-violet-500'} />}
-                      {j.puedeAtajarProximo && !j.esArquero && <ShieldAlert size={12} className={sel ? 'text-blue-200' : 'text-blue-400'} />}
+                      {j.puesto === 'arquero' && <Shield size={12} className={sel ? 'text-violet-200' : 'text-violet-500'} />}
+                      {j.puedeAtajarProximo && j.puesto !== 'arquero' && <ShieldAlert size={12} className={sel ? 'text-blue-200' : 'text-blue-400'} />}
                     </button>
                   );
                 })}
