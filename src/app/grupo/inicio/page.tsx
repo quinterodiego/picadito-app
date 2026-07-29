@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Loader2 } from 'lucide-react';
@@ -84,15 +84,9 @@ export default function GrupoInicioPage() {
 
       <p className="text-xs text-slate-400">
         Conectado como <span className="font-medium">{session?.user?.email}</span>.{' '}
-        <button
-          onClick={async () => {
-            await signOut({ redirect: false });
-            window.location.replace('/login');
-          }}
-          className="cursor-pointer underline hover:text-slate-600"
-        >
+        <a href="/api/logout" className="underline hover:text-slate-600">
           Salir
-        </button>
+        </a>
       </p>
 
       <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

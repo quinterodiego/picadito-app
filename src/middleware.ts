@@ -26,6 +26,7 @@ export default auth((req) => {
   if (!groupId) {
     if (pathname.startsWith('/api/')) {
       if (pathname.startsWith('/api/grupos')) return NextResponse.next();
+      if (pathname.startsWith('/api/logout')) return NextResponse.next();
       return NextResponse.json({ error: 'Sin grupo asignado' }, { status: 403 });
     }
     if (pathname.startsWith('/grupo/')) return NextResponse.next();
