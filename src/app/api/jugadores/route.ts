@@ -26,9 +26,9 @@ export async function POST(req: Request) {
     const jugador = await addJugador(groupId, {
       nombre: body.nombre,
       apodo: body.apodo ?? '',
+      puesto: body.puesto ?? undefined,
       activo: body.activo ?? true,
       lesionado: body.lesionado ?? false,
-      esArquero: body.esArquero ?? false,
       puedeAtajarProximo: body.puedeAtajarProximo ?? false,
     });
     return NextResponse.json(jugador, { status: 201 });

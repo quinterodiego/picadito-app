@@ -1,5 +1,7 @@
 import { google } from 'googleapis';
-import type { Jugador, Partido } from './types';
+import type { Jugador, PuestoJugador, Partido } from './types';
+
+const PUESTOS_VALIDOS = new Set(['arquero', 'defensor', 'medio', 'delantero']);
 
 export interface GrupoConfig {
   id: string;
@@ -171,16 +173,22 @@ export async function getJugadores(groupId: string): Promise<Jugador[]> {
   const rows = res.data.values ?? [];
   return rows
     .filter(row => row[0] && row[8] === groupId)
-    .map(row => ({
-      id: row[0],
-      nombre: row[1],
-      // col C (row[2]) was nivel — kept in sheet for legacy but not used
-      activo: row[3] === 'TRUE',
-      apodo: row[4] ?? '',
-      lesionado: row[5] === 'TRUE',
-      esArquero: row[6] === 'TRUE',
-      puedeAtajarProximo: row[7] === 'TRUE',
-    }));
+    .map(row => {
+      // col C: now stores puesto; may still hold old nivel values — ignore those
+      const puestoRaw = row[2];
+      const puestoValido = PUESTOS_VALIDOS.has(puestoRaw) ? puestoRaw as PuestoJugador : undefined;
+      // col G: legacy esArquero — migrate to puesto if puesto not set yet
+      const legacyArquero = !puestoValido && row[6] === 'TRUE';
+      return {
+        id: row[0],
+        nombre: row[1],
+        puesto: legacyArquero ? 'arquero' as PuestoJugador : puestoValido,
+        activo: row[3] === 'TRUE',
+        apodo: row[4] ?? '',
+        lesionado: row[5] === 'TRUE',
+        puedeAtajarProximo: row[7] === 'TRUE',
+      };
+    });
 }
 
 export async function addJugador(groupId: string, data: Omit<Jugador, 'id'>): Promise<Jugador> {
@@ -192,8 +200,8 @@ export async function addJugador(groupId: string, data: Omit<Jugador, 'id'>): Pr
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
-        id, data.nombre, '', data.activo,
-        data.apodo ?? '', data.lesionado, data.esArquero, data.puedeAtajarProximo,
+        id, data.nombre, data.puesto ?? '', data.activo,
+        data.apodo ?? '', data.lesionado, data.puesto === 'arquero', data.puedeAtajarProximo,
         groupId,
       ]],
     },
@@ -217,8 +225,8 @@ export async function updateJugador(groupId: string, jugador: Jugador): Promise<
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
-        jugador.id, jugador.nombre, '', jugador.activo,
-        jugador.apodo ?? '', jugador.lesionado, jugador.esArquero, jugador.puedeAtajarProximo,
+        jugador.id, jugador.nombre, jugador.puesto ?? '', jugador.activo,
+        jugador.apodo ?? '', jugador.lesionado, jugador.puesto === 'arquero', jugador.puedeAtajarProximo,
         groupId,
       ]],
     },

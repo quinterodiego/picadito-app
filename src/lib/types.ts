@@ -1,12 +1,13 @@
 export type ResultadoPartido = 'A' | 'B' | 'empate';
+export type PuestoJugador = 'arquero' | 'defensor' | 'medio' | 'delantero';
 
 export interface Jugador {
   id: string;
   nombre: string;
   apodo?: string;
+  puesto?: PuestoJugador;
   activo: boolean;
   lesionado: boolean;
-  esArquero: boolean;
   puedeAtajarProximo: boolean;
 }
 
