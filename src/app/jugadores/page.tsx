@@ -282,24 +282,42 @@ export default function JugadoresPage() {
             <div className="space-y-2">
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Inactivos</p>
               {inactivos.map(j => (
-                <Card key={j.id} className="opacity-50">
+                <Card key={j.id} className="opacity-60">
                   <CardContent className="py-3 px-4 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate text-slate-500">{j.nombre}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-medium truncate text-slate-500">{j.apodo || j.nombre}</p>
+                        {j.apodo && <p className="text-xs text-slate-400 truncate">({j.nombre})</p>}
+                        {j.puesto && (() => {
+                          const p = PUESTOS.find(p => p.value === j.puesto);
+                          return p ? (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${p.color}`}>{p.label}</span>
+                          ) : null;
+                        })()}
+                      </div>
                     </div>
-                    <button
-                      onClick={() => toggleActivoMutation.mutate(j)}
-                      className="cursor-pointer p-1.5 rounded-lg hover:bg-brand-light text-slate-400 hover:text-brand"
-                      title="Activar"
-                    >
-                      <UserCheck size={16} />
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(j)}
-                      className="cursor-pointer p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => toggleActivoMutation.mutate(j)}
+                        className="cursor-pointer p-1.5 rounded-lg hover:bg-brand-light text-slate-400 hover:text-brand"
+                        title="Activar"
+                      >
+                        <UserCheck size={16} />
+                      </button>
+                      <button
+                        onClick={() => setEditando(j)}
+                        className="cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                        title="Editar"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(j)}
+                        className="cursor-pointer p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
