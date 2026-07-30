@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeftRight, ChevronLeft, ChevronRight, ImageDown, Check } from 'lucide-react';
+import { ArrowLeftRight, ChevronLeft, ChevronRight, Check, Share2 } from 'lucide-react';
 import type { Jugador } from '@/lib/types';
 
 // ─── Formation catalog ────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ export default function CanchaVista({
   const [invertido, setInvertido] = useState(false);
   const [formIdx1, setFormIdx1]   = useState(() => initialFormIdx(opts1Init, initialFormacion1));
   const [formIdx2, setFormIdx2]   = useState(() => initialFormIdx(opts2Init, initialFormacion2));
-  const [copied, setCopied]       = useState(false);
+  const [shared, setShared]        = useState(false);
   const [pos1, setPos1]           = useState<[number, number][]>(() => {
     if (initialPos1 && initialPos1.length === equipo1.length) return initialPos1;
     const idx = initialFormIdx(opts1Init, initialFormacion1);
@@ -155,14 +155,14 @@ export default function CanchaVista({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f1.name, f2.name, pos1, pos2]);
 
-  // ─── Copy field as image ──────────────────────────────────────────────────
-  async function copyImage() {
+  // ─── Share / copy field as image ─────────────────────────────────────────
+  async function shareImage() {
     const isDesktop = window.matchMedia('(min-width: 768px)').matches;
     const svg = (isDesktop ? svgLandscapeRef : svgPortraitRef).current;
     if (!svg) return;
 
-    const vb    = svg.viewBox.baseVal;
-    const scale = 2;
+    const vb     = svg.viewBox.baseVal;
+    const scale  = 2;
     const svgStr = new XMLSerializer().serializeToString(svg);
     const blob   = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
     const url    = URL.createObjectURL(blob);
@@ -179,14 +179,27 @@ export default function CanchaVista({
 
       canvas.toBlob(async (png) => {
         if (!png) return;
+        const file = new File([png], 'partido.png', { type: 'image/png' });
+
+        // Native share sheet (mobile) — ideal for WhatsApp etc.
+        if (navigator.canShare?.({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: 'Equipos del partido' });
+            setShared(true);
+            setTimeout(() => setShared(false), 2000);
+            return;
+          } catch { /* user cancelled — do nothing */ return; }
+        }
+
+        // Desktop: copy to clipboard
         try {
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          setShared(true);
+          setTimeout(() => setShared(false), 2000);
         } catch {
           const a = document.createElement('a');
           a.href = URL.createObjectURL(png);
-          a.download = 'equipos-ncuf.png';
+          a.download = 'partido.png';
           a.click();
         }
       }, 'image/png');
@@ -397,15 +410,15 @@ export default function CanchaVista({
             {invertido ? 'A: oscuro · B: claro' : 'A: claro · B: oscuro'}
           </button>
           <button
-            onClick={copyImage}
+            onClick={shareImage}
             className={`cursor-pointer flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-              copied
+              shared
                 ? 'border-brand bg-brand-light text-brand'
                 : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
             }`}
           >
-            {copied ? <Check size={13} /> : <ImageDown size={13} />}
-            {copied ? '¡Copiado!' : 'Copiar imagen'}
+            {shared ? <Check size={13} /> : <Share2 size={13} />}
+            {shared ? '¡Listo!' : 'Compartir'}
           </button>
         </div>
       </div>

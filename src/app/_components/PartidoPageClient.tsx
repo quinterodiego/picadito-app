@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Users, Shuffle, Save,
   Bone, Shield, ShieldAlert, CheckCircle2, ClipboardList, ArrowLeftRight, ArrowUpDown,
-  UserPlus, X, Telescope,
+  UserPlus, X, Telescope, Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +15,62 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import CanchaVista, { type CanchaState } from '@/components/CanchaVista';
-import type { Jugador, EquipoSugerido, ResultadoPartido } from '@/lib/types';
+import type { Jugador, EquipoSugerido, ResultadoPartido, Partido } from '@/lib/types';
+
+// ─── Card de resultado pendiente ──────────────────────────────────────────────
+function ResultadoPendiente({ partido, jugMap }: { partido: Partido; jugMap: Map<string, Jugador> }) {
+  const qc = useQueryClient();
+  const [descartado, setDescartado] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: (resultado: ResultadoPartido) =>
+      axios.put(`/api/partidos/${partido.id}`, { ...partido, resultado }),
+    onSuccess: () => {
+      toast.success('Resultado guardado');
+      qc.invalidateQueries({ queryKey: ['partidos'] });
+      setDescartado(true);
+    },
+    onError: () => toast.error('Error al guardar resultado'),
+  });
+
+  if (descartado) return null;
+
+  const nombre = (id: string) => { const j = jugMap.get(id); return j ? (j.apodo || j.nombre) : id; };
+  const fecha = new Date(partido.fecha + 'T00:00:00').toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/60">
+      <CardContent className="py-3 px-4 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Trophy size={14} className="text-amber-500" />
+            <span className="text-sm font-semibold text-amber-800">¿Cómo terminó el partido del {fecha}?</span>
+          </div>
+          <button onClick={() => setDescartado(true)} className="cursor-pointer text-slate-300 hover:text-slate-500">
+            <X size={14} />
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {(['A', 'empate', 'B'] as const).map(r => (
+            <button
+              key={r}
+              onClick={() => mutation.mutate(r)}
+              disabled={mutation.isPending}
+              className="cursor-pointer py-2 rounded-lg text-sm font-semibold border transition-all bg-white border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-slate-700 disabled:opacity-50"
+            >
+              {r === 'A' ? '🤍 Ganó A' : r === 'B' ? '💚 Ganó B' : '🤝 Empate'}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 truncate">
+          A: {partido.equipo1.slice(0, 3).map(nombre).join(', ')}{partido.equipo1.length > 3 ? '...' : ''}
+          {'  ·  '}
+          B: {partido.equipo2.slice(0, 3).map(nombre).join(', ')}{partido.equipo2.length > 3 ? '...' : ''}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
 
 
 // ─── Columna editable de un equipo ────────────────────────────────────────────
@@ -191,6 +246,16 @@ export default function PartidoPageClient() {
     queryFn: () => axios.get('/api/jugadores').then(r => r.data),
   });
 
+  const { data: partidos = [] } = useQuery<Partido[]>({
+    queryKey: ['partidos'],
+    queryFn: () => axios.get('/api/partidos').then(r => r.data),
+  });
+
+  const jugMap = new Map(jugadores.map(j => [j.id, j]));
+  const partidoPendiente = [...partidos]
+    .sort((a, b) => b.fecha.localeCompare(a.fecha))
+    .find(p => !p.resultado && !partidoGuardadoId);
+
   const jugadoresActivos = jugadores.filter(j => j.activo && !j.lesionado);
   const jugadoresLesionados = jugadores.filter(j => j.activo && j.lesionado);
   const jugadoresAnteriores = jugadores.filter(j => !j.activo);
@@ -308,6 +373,10 @@ export default function PartidoPageClient() {
 
   return (
     <div className="space-y-4">
+      {partidoPendiente && (
+        <ResultadoPendiente partido={partidoPendiente} jugMap={jugMap} />
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Armar partido</h1>
         <Badge variant="secondary">{totalJugadores} jugadores</Badge>
