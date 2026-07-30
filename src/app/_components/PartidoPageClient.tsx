@@ -258,7 +258,7 @@ export default function PartidoPageClient() {
 
   const jugadoresActivos = jugadores.filter(j => j.activo && !j.lesionado);
   const jugadoresLesionados = jugadores.filter(j => j.activo && j.lesionado);
-  const jugadoresAnteriores = jugadores.filter(j => !j.activo);
+  const jugadoresAnteriores = jugadores.filter(j => j.esInvitado);
   const totalJugadores = asistentes.length + invitados.length;
 
   function agregarInvitado() {

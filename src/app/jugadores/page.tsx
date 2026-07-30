@@ -169,8 +169,9 @@ export default function JugadoresPage() {
     onError: () => toast.error('Error al eliminar jugador'),
   });
 
-  const activos = jugadores.filter(j => j.activo);
-  const inactivos = jugadores.filter(j => !j.activo);
+  const activos   = jugadores.filter(j => j.activo);
+  const invitados = jugadores.filter(j => !j.activo && j.esInvitado);
+  const inactivos = jugadores.filter(j => !j.activo && !j.esInvitado);
 
   return (
     <div className="space-y-4">
@@ -185,7 +186,7 @@ export default function JugadoresPage() {
         <p className="text-sm text-slate-400 text-center py-8">Cargando...</p>
       ) : (
         <>
-          <p className="text-sm text-slate-500">{activos.length} activos · {inactivos.length} inactivos</p>
+          <p className="text-sm text-slate-500">{activos.length} activos · {invitados.length} invitados · {inactivos.length} inactivos</p>
 
           <div className="space-y-2">
             {activos.map(j => (
@@ -238,6 +239,45 @@ export default function JugadoresPage() {
             ))}
           </div>
 
+          {invitados.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-purple-400 uppercase tracking-wide">Invitados</p>
+              {invitados.map(j => (
+                <Card key={j.id} className="border-purple-100">
+                  <CardContent className="py-3 px-4 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-medium truncate text-slate-600">{j.apodo || j.nombre}</p>
+                        {j.apodo && <p className="text-xs text-slate-400 truncate">({j.nombre})</p>}
+                        {j.puesto && (() => {
+                          const p = PUESTOS.find(p => p.value === j.puesto);
+                          return p ? (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${p.color}`}>{p.label}</span>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setEditando(j)}
+                        className="cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+                        title="Editar"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(j)}
+                        className="cursor-pointer p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           {inactivos.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-medium text-slate-400 uppercase tracking-wide">Inactivos</p>
@@ -285,7 +325,7 @@ export default function JugadoresPage() {
           {editando && (
             <JugadorForm
               initial={editando}
-              onSave={data => editMutation.mutate(data)}
+              onSave={data => editMutation.mutate({ ...data, esInvitado: editando.esInvitado })}
               onClose={() => setEditando(null)}
               loading={editMutation.isPending}
             />

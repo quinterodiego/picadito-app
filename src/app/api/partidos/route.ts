@@ -34,6 +34,7 @@ export async function POST(req: Request) {
         activo: false,
         lesionado: false,
         puedeAtajarProximo: false,
+        esInvitado: true,
       });
       idMap.set(inv.id, creado.id);
     }

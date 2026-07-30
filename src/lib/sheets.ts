@@ -162,13 +162,13 @@ export async function unirseConCodigo(inviteCode: string, userId: string): Promi
 }
 
 // ─── Jugadores ────────────────────────────────────────────────────────────────
-// Schema: A=id, B=nombre, C=nivel, D=activo, E=apodo, F=lesionado, G=esArquero, H=puedeAtajarProximo, I=group_id
+// Schema: A=id, B=nombre, C=puesto, D=activo, E=apodo, F=lesionado, G=esArquero(legacy), H=puedeAtajarProximo, I=group_id, J=esInvitado
 
 export async function getJugadores(groupId: string): Promise<Jugador[]> {
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A2:I',
+    range: 'Jugadores!A2:J',
   });
   const rows = res.data.values ?? [];
   return rows
@@ -187,6 +187,7 @@ export async function getJugadores(groupId: string): Promise<Jugador[]> {
         apodo: row[4] ?? '',
         lesionado: row[5] === 'TRUE',
         puedeAtajarProximo: row[7] === 'TRUE',
+        esInvitado: row[9] === 'TRUE',
       };
     });
 }
@@ -196,13 +197,13 @@ export async function addJugador(groupId: string, data: Omit<Jugador, 'id'>): Pr
   const id = Date.now().toString();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A:I',
+    range: 'Jugadores!A:J',
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
         id, data.nombre, data.puesto ?? '', data.activo,
         data.apodo ?? '', data.lesionado, data.puesto === 'arquero', data.puedeAtajarProximo,
-        groupId,
+        groupId, data.esInvitado ?? false,
       ]],
     },
   });
@@ -213,7 +214,7 @@ export async function updateJugador(groupId: string, jugador: Jugador): Promise<
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A:I',
+    range: 'Jugadores!A:J',
   });
   const rows = res.data.values ?? [];
   const rowIndex = rows.findIndex(r => r[0] === jugador.id && r[8] === groupId);
@@ -221,13 +222,13 @@ export async function updateJugador(groupId: string, jugador: Jugador): Promise<
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `Jugadores!A${sheetRow}:I${sheetRow}`,
+    range: `Jugadores!A${sheetRow}:J${sheetRow}`,
     valueInputOption: 'RAW',
     requestBody: {
       values: [[
         jugador.id, jugador.nombre, jugador.puesto ?? '', jugador.activo,
         jugador.apodo ?? '', jugador.lesionado, jugador.puesto === 'arquero', jugador.puedeAtajarProximo,
-        groupId,
+        groupId, jugador.esInvitado ?? false,
       ]],
     },
   });
@@ -237,7 +238,7 @@ export async function deleteJugador(groupId: string, id: string): Promise<void> 
   const sheets = await getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: 'Jugadores!A:I',
+    range: 'Jugadores!A:J',
   });
   const rows = res.data.values ?? [];
   const rowIndex = rows.findIndex(r => r[0] === id && r[8] === groupId);
@@ -245,7 +246,7 @@ export async function deleteJugador(groupId: string, id: string): Promise<void> 
   const sheetRow = rowIndex + 1;
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SHEET_ID,
-    range: `Jugadores!A${sheetRow}:I${sheetRow}`,
+    range: `Jugadores!A${sheetRow}:J${sheetRow}`,
   });
 }
 

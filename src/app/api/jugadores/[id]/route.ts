@@ -18,6 +18,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       activo: body.activo,
       lesionado: body.lesionado ?? false,
       puedeAtajarProximo: body.puedeAtajarProximo ?? false,
+      esInvitado: body.esInvitado ?? false,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

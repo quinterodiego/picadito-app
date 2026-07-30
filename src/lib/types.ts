@@ -9,6 +9,7 @@ export interface Jugador {
   activo: boolean;
   lesionado: boolean;
   puedeAtajarProximo: boolean;
+  esInvitado?: boolean;
 }
 
 export interface Partido {

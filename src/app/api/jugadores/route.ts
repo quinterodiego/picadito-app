@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       activo: body.activo ?? true,
       lesionado: body.lesionado ?? false,
       puedeAtajarProximo: body.puedeAtajarProximo ?? false,
+      esInvitado: body.esInvitado ?? false,
     });
     return NextResponse.json(jugador, { status: 201 });
   } catch (error) {
